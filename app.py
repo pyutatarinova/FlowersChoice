@@ -6,16 +6,21 @@ import bcrypt
 import jwt
 from flask_cors import CORS
 import os
+from dotenv import load_dotenv
 
 app = Flask(__name__)
 CORS(app)
 
 # ===================== Конфигурация =====================
+# Загружаем переменные из .env файла
+load_dotenv()
+
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
 DB_NAME = os.getenv("DB_NAME", "mysite")
 DB_USER = os.getenv("DB_USER", "postgres")
 DB_PASS = os.getenv("DB_PASS", "12345")
+SECRET_KEY = os.getenv("SECRET_KEY", "YOUR_SECRET_KEY")
 
 SECRET_KEY = os.getenv("SECRET_KEY", "YOUR_SECRET_KEY")
 JWT_EXPIRATION = 3600  # 1 час
