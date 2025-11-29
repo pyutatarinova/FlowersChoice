@@ -1,3 +1,75 @@
+// --- Модальное окно регистрации ---
+function AuthModal({ onClose, onRegister }) {
+  const [form, setForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    has_children: false,
+    has_pets: false,
+    has_allergies: false,
+    preferences: ''
+  });
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!form.name || !form.email || !form.password) {
+      setError('Пожалуйста, заполните все обязательные поля.');
+      return;
+    }
+    setError('');
+    onRegister(form);
+  };
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl text-left">
+        <h3 className="text-2xl font-bold text-emerald-800 mb-4 text-center">Регистрация пользователя</h3>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Имя *</label>
+          <input type="text" name="name" value={form.name} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg" required />
+        </div>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Почта *</label>
+          <input type="email" name="email" value={form.email} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg" required />
+        </div>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Пароль *</label>
+          <input type="password" name="password" value={form.password} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg" required />
+        </div>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Есть ли у вас дети?</label>
+          <input type="checkbox" name="has_children" checked={form.has_children} onChange={handleChange} className="mr-2" /> Да
+        </div>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Есть ли у вас домашние животные?</label>
+          <input type="checkbox" name="has_pets" checked={form.has_pets} onChange={handleChange} className="mr-2" /> Да
+        </div>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Есть ли аллергия на цветы?</label>
+          <input type="checkbox" name="has_allergies" checked={form.has_allergies} onChange={handleChange} className="mr-2" /> Да
+        </div>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Ваши предпочтения по цветам</label>
+          <textarea name="preferences" value={form.preferences} onChange={handleChange} rows={3} className="w-full p-2 border border-gray-300 rounded-lg" placeholder="Опишите ваши пожелания..." />
+        </div>
+        {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
+        <div className="flex gap-3 justify-center mt-4">
+          <button type="submit" className="py-2 px-4 bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-lg">Зарегистрироваться</button>
+          <button type="button" onClick={onClose} className="py-2 px-4 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold rounded-lg">Отмена</button>
+        </div>
+      </form>
+    </div>
+  );
+}
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 
@@ -191,7 +263,7 @@ const mockResults = [
 
 // --- Компонент Header ---
 
-const Header = ({ favoritesCount, myPlantsCount, onNavigate, userId }) => (
+const Header = ({ favoritesCount, myPlantsCount, onNavigate, userId, userName }) => (
   <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm shadow-md border-b border-emerald-100 p-4">
     <div className="max-w-4xl mx-auto flex justify-between items-center">
       <h1 className="text-2xl font-bold text-emerald-700 tracking-tight flex items-center cursor-pointer" onClick={() => onNavigate('home')}>
@@ -210,8 +282,9 @@ const Header = ({ favoritesCount, myPlantsCount, onNavigate, userId }) => (
           <Heart className="w-5 h-5" />
           {favoritesCount > 0 && <span className="absolute -top-1 -right-1 bg-lime-500 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">{favoritesCount}</span>}
         </button>
-        <button onClick={() => onNavigate('profile')} className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200" title={`Аккаунт (ID: ${userId || 'Гость'})`}>
-            <User className="w-5 h-5" />
+        <button onClick={() => onNavigate('profile')} className="p-2 rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center gap-2" title={`Аккаунт (ID: ${userId || 'Гость'})`}>
+          <User className="w-5 h-5" />
+          {userName && <span className="ml-1 text-emerald-700 font-semibold">{userName}</span>}
         </button>
         <button onClick={() => window.location.reload()} className="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors flex items-center" title="Начать сначала">
           <RefreshCcw className="w-4 h-4" />
@@ -643,61 +716,33 @@ const MyPlantsScreen = ({ myPlants, onUpdatePlant, onRemovePlant, onNavigate }) 
 };
 
 // --- Компонент ProfileScreen ---
-const ProfileScreen = ({ userProfile, onUpdateProfile, onNavigate }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    const [profileData, setProfileData] = useState(userProfile);
-
-    useEffect(() => {
-        setProfileData(userProfile);
-    }, [userProfile]);
-
-    const handleSave = () => {
-        onUpdateProfile(profileData);
-        setIsEditing(false);
-    };
-
-    const handleTraitToggle = (trait) => {
-        setProfileData(prev => ({...prev, traits: {...prev.traits, [trait]: !prev.traits[trait]}}));
-    };
-
+const ProfileScreen = ({ userProfile, onShowAuth }) => {
+  const isRegistered = Boolean(userProfile?.name);
+  if (!isRegistered) {
     return (
-        <div className="p-6 bg-white rounded-2xl shadow-xl max-w-lg mx-auto">
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-emerald-800">Личный кабинет</h2>
-                <button onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)} className="text-sm font-semibold text-lime-600 hover:text-lime-800">
-                    {isEditing ? 'Отмена' : 'Редактировать'}
-                </button>
-            </div>
-
-            <div className="space-y-4">
-                <div>
-                    <label className="text-sm font-medium text-gray-500">Имя</label>
-                    <input type="text" value={profileData.name || ''} onChange={e => setProfileData({...profileData, name: e.target.value})} disabled={!isEditing} className="w-full p-2 border border-gray-300 rounded-lg mt-1 bg-gray-50 disabled:bg-gray-200" />
-                </div>
-                <div>
-                    <label className="text-sm font-medium text-gray-500">Дата рождения</label>
-                    <input type="date" value={profileData.birthdate || ''} onChange={e => setProfileData({...profileData, birthdate: e.target.value})} disabled={!isEditing} className="w-full p-2 border border-gray-300 rounded-lg mt-1 bg-gray-50 disabled:bg-gray-200" />
-                </div>
-
-                <div className="border-t pt-4">
-                    <h3 className="text-lg font-semibold text-emerald-700">Личные признаки</h3>
-                    <p className="text-xs text-gray-500 mb-2">Это поможет нам делать более точные рекомендации.</p>
-                    <div className="space-y-2">
-                        {['has_pets', 'has_children', 'has_allergies'].map(trait => (
-                            <label key={trait} className="flex items-center justify-between p-3 bg-emerald-50 rounded-lg">
-                                <span className="font-medium text-emerald-800">{ {has_pets: 'Есть домашние животные', has_children: 'Есть дети', has_allergies: 'Есть аллергия на растения'}[trait] }</span>
-                                <input type="checkbox" checked={profileData.traits?.[trait] || false} onChange={() => handleTraitToggle(trait)} disabled={!isEditing} className="w-5 h-5 text-lime-500 rounded focus:ring-lime-500" />
-                            </label>
-                        ))}
-                    </div>
-                </div>
-
-                {isEditing && (
-                    <button onClick={handleSave} className="w-full py-3 bg-lime-500 text-white font-bold rounded-xl hover:bg-lime-600 transition-colors shadow-lg">Сохранить изменения</button>
-                )}
-            </div>
+      <div className="p-6 bg-white rounded-2xl shadow-xl max-w-lg mx-auto text-center">
+        <h2 className="text-3xl font-bold text-emerald-800 mb-4">Личный кабинет</h2>
+        <p className="text-emerald-600 mb-6">Чтобы просматривать и редактировать профиль, войдите или зарегистрируйтесь.</p>
+        <div className="flex gap-3 justify-center mt-4">
+          <button onClick={() => onShowAuth('login')} className="py-2 px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg">Войти</button>
+          <button onClick={() => onShowAuth('register')} className="py-2 px-4 bg-lime-500 hover:bg-lime-600 text-white font-semibold rounded-lg">Зарегистрироваться</button>
         </div>
+      </div>
     );
+  }
+  return (
+    <div className="p-6 bg-white rounded-2xl shadow-xl max-w-lg mx-auto text-left">
+      <h2 className="text-3xl font-bold text-emerald-800 mb-4">Личный кабинет</h2>
+      <div className="space-y-2">
+        <div><span className="font-semibold text-emerald-700">Имя:</span> {userProfile?.name || '—'}</div>
+        <div><span className="font-semibold text-emerald-700">Почта:</span> {userProfile?.email || '—'}</div>
+        <div><span className="font-semibold text-emerald-700">Дети:</span> {userProfile?.has_children ? 'Да' : 'Нет'}</div>
+        <div><span className="font-semibold text-emerald-700">Животные:</span> {userProfile?.has_pets ? 'Да' : 'Нет'}</div>
+        <div><span className="font-semibold text-emerald-700">Аллергия на цветы:</span> {userProfile?.has_allergies ? 'Да' : 'Нет'}</div>
+        <div><span className="font-semibold text-emerald-700">Предпочтения:</span> {userProfile?.preferences || '—'}</div>
+      </div>
+    </div>
+  );
 };
 
 // --- НОВЫЙ Компонент RatingsScreen ---
@@ -799,6 +844,8 @@ const App = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [favorites, setFavorites] = useState([]); 
   const [comparisonPlants, setComparisonPlants] = useState([]); 
+  const [showAuthWidget, setShowAuthWidget] = useState(false);
+  const [authUser, setAuthUser] = useState(null);
   
   const [db, setDb] = useState(null);
   const [auth, setAuth] = useState(null);
@@ -806,6 +853,22 @@ const App = () => {
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [myPlants, setMyPlants] = useState([]);
   const [userProfile, setUserProfile] = useState({});
+
+  // --- Загрузка профиля пользователя из userProfile.json при старте ---
+  useEffect(() => {
+    async function fetchProfile() {
+      try {
+        const res = await fetch('http://localhost:3001/src/userProfile.json');
+        if (res.ok) {
+          const data = await res.json();
+          setUserProfile(data);
+        }
+      } catch (e) {
+        // ignore if not found
+      }
+    }
+    fetchProfile();
+  }, []);
 
   // --- FIRESTORE CRUD ---
   const addToMyPlants = useCallback(async (plant) => {
@@ -948,7 +1011,7 @@ const App = () => {
           case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
           case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} />;
           case 'my_plants': return <MyPlantsScreen myPlants={myPlants} onUpdatePlant={updatePlant} onRemovePlant={removePlant} onNavigate={navigate} />;
-          case 'profile': return <ProfileScreen userProfile={userProfile} onUpdateProfile={updateUserProfile} onNavigate={navigate} />;
+          case 'profile': return <ProfileScreen userProfile={userProfile} onShowAuth={setShowAuthWidget} />;
           case 'ratings': return <RatingsScreen myPlants={myPlants} favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} />;
           default: return null;
       }
@@ -956,12 +1019,36 @@ const App = () => {
 
   return (
     <div className="min-h-screen bg-emerald-50 flex flex-col font-sans antialiased">
-      <Header favoritesCount={favorites.length} myPlantsCount={myPlants.length} onNavigate={navigate} userId={userId} />
+      <Header favoritesCount={favorites.length} myPlantsCount={myPlants.length} onNavigate={navigate} userId={userId} userName={userProfile?.name} />
       <main className="flex-grow p-4 sm:p-8 max-w-4xl w-full mx-auto">
         <div className="w-full h-full flex flex-col justify-center py-8">
           {renderContent()}
         </div>
       </main>
+      {/* Auth placeholder modal (simple stub when showAuthWidget is true) */}
+
+      {showAuthWidget && (
+        <AuthModal 
+          onClose={() => setShowAuthWidget(false)} 
+          onRegister={async (userData) => {
+            // Отправляем данные пользователя на сервер
+            try {
+              await fetch('http://localhost:3001/api/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(userData, null, 2)
+              });
+            } catch (e) {
+              console.error('Ошибка сохранения профиля:', e);
+            }
+            setUserProfile(userData);
+            setShowAuthWidget(false);
+            navigate('home');
+          }}
+        />
+      )}
+
+
       <div className="p-4 text-center text-xs text-gray-400">
           {userId && `Текущий ID пользователя: ${userId}`}
       </div>
@@ -1107,4 +1194,3 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate }) => {
 };
 
 export default App;
-
