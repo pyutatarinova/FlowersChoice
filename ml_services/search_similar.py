@@ -23,7 +23,7 @@ from typing import Any, Dict, Iterable, List, Tuple, Union
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-from backend.app.db.plant_repository import PlantRepository
+# from backend.app.db.plant_repository import PlantRepository
 
 
 class PlantSearchService:

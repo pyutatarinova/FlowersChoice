@@ -1,4 +1,6 @@
 .env
 userProfile.json
 venv
-frontend\node_modules
+ml_venv
+frontend/node_modules
+DB/postgres_data
