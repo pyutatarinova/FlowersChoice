@@ -1,2 +1,4 @@
 .env
+userProfile.json
+venv
 frontend\node_modules
