@@ -14,11 +14,12 @@ Results: list of tuples `(id: int, distance: float)` ordered by distance (asc).
 from __future__ import annotations
 
 import os
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
 
 from dotenv import load_dotenv
 import psycopg2
 from psycopg2 import sql
+import psycopg2.extras as extras
 
 
 load_dotenv()
@@ -48,11 +49,12 @@ class PlantRepository:
     def _get_connection(self):
         return psycopg2.connect(self._dsn)
 
-    def top_k_by_embedding(self, embedding: List[float], k: int = 10) -> List[Tuple[int, float]]:
-        """Return top-k plant ids with their cosine distances.
+    def top_k_by_embedding(self, embedding: List[float], k: int = 10) -> List[Dict[str, Any]]:
+        """Return top-k plants with their fields and cosine similarity.
 
-        The method builds a Postgres array literal, casts it to `vector` and
-        uses the pgvector cosine distance operator `<#>` (smaller == more similar).
+        Returns a list of dicts with keys: `id`, `name`, `features` and
+        `cosine_similarity` (higher == more similar). The `features` field is
+        returned as a Python object (decoded from JSONB).
         """
         if not embedding:
             return []
@@ -62,16 +64,26 @@ class PlantRepository:
 
         # Compose SQL with Literal to avoid param-formatting issues when
         # embedding literal contains characters that confused param substitution.
+        # features добавить
         query = sql.SQL(
-            "SELECT id, 1 - (embedding <=> {vec}::vector) AS cosine_similarity "
+            "SELECT id, name, features, 1 - (embedding <=> {vec}::vector) AS cosine_similarity "
             "FROM public.plants WHERE embedding IS NOT NULL "
             "ORDER BY cosine_similarity DESC LIMIT {limit};"
         ).format(vec=sql.Literal(arr_literal), limit=sql.Literal(k))
 
         with self._get_connection() as conn:
-            with conn.cursor() as cur:
+            with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
                 cur.execute(query)
                 rows = cur.fetchall()
 
-        # rows are tuples (id, distance)
-        return [(int(r[0]), float(r[1])) for r in rows]
+        # rows are RealDictRow -> convert to plain dicts and ensure types
+        results: List[Dict[str, Any]] = []
+        for r in rows:
+            results.append({
+                'id': int(r['id']),
+                'name': r.get('name'),
+                'features': r.get('features'),
+                'cosine_similarity': float(r.get('cosine_similarity')) if r.get('cosine_similarity') is not None else None,
+            })
+
+        return results

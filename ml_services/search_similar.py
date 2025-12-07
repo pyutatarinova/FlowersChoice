@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Tuple, Dict, Any
+import json
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -52,24 +53,50 @@ class PlantSearchService:
         emb = model.encode([text], normalize_embeddings=True, show_progress_bar=False)
         return list(np.asarray(emb[0], dtype=float))
 
-    def find_similar_plants(self, text: str, top_k: int = 10) -> List[Tuple[int, float]]:
-        """Return top-k (id, distance) tuples for the given text prompt.
+    def find_similar_plants(self, text: str, top_k: int = 10) -> List[Dict[str, Any]]:
+        """Return top-k plants (as dicts) for the given text prompt.
 
         - `text` is encoded using the SentenceTransformer model.
-        - Repository returns (id, distance) ordered by ascending distance.
+        - Repository returns full plant fields plus `cosine_similarity`.
         """
         if not isinstance(text, str) or not text.strip():
             return []
-
+        print('Starting embedding computation...')
         embedding = self._embed_text(text.strip())
+        print('Embedding computed, querying repository...')
         results = self.repo.top_k_by_embedding(embedding, k=top_k)
         return results
 
 
-def find_similar_plants(text: str, top_k: int = 10) -> List[Tuple[int, float]]:
-    """Convenience helper: compute embedding for `text` and return top-K results."""
+def find_similar_plants(text: str, top_k: int = 10) -> str:
+    """Convenience helper: compute embedding and return JSON string with top-K plants.
+
+    Returns a single JSON object with key `plants` containing a list of up to
+    `top_k` plant objects. Fields from the `features` JSONB column are promoted
+    to the top level for each plant (so there is no nested `features`). Each
+    plant object includes `id`, `name`, promoted feature fields and
+    `cosine_similarity`.
+    """
     service = PlantSearchService()
-    return service.find_similar_plants(text, top_k=top_k)
+    results = service.find_similar_plants(text, top_k=top_k)
+
+    flattened: List[Dict[str, Any]] = []
+    # desired_features = ['light_requirements', 'watering_frequency', 'humidity_preference', 'toxicity']
+    for r in results:
+        features = r.get('features') or {}
+        merged: Dict[str, Any] = {}
+        # for key in desired_features:
+        #     if key in features:
+        #         merged[key] = features[key]
+        if isinstance(features, dict):
+            merged.update(features)
+        # Ensure primary fields override any feature keys
+        merged['id'] = r.get('id')
+        merged['name'] = r.get('name')
+        merged['cosine_similarity'] = r.get('cosine_similarity')
+        flattened.append(merged)
+
+    return json.dumps({'plants': flattened}, ensure_ascii=False)
 
 
 if __name__ == "__main__":
