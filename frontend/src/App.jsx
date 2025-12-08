@@ -70,6 +70,67 @@ function AuthModal({ onClose, onRegister }) {
     </div>
   );
 }
+
+// --- Модальное окно логина ---
+function LoginModal({ onClose, onLogin }) {
+  const [form, setForm] = React.useState({
+    email: '',
+    password: ''
+  });
+  const [error, setError] = React.useState('');
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!form.email || !form.password) {
+      setError('Пожалуйста, заполните все поля.');
+      return;
+    }
+    try {
+      const res = await fetch('http://localhost:3001/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onLogin(data); // data может содержать профиль
+      } else {
+        const err = await res.json();
+        setError(err.message || 'Ошибка входа.');
+      }
+    } catch (e) {
+      setError('Ошибка соединения с сервером.');
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+      <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl text-left">
+        <h3 className="text-2xl font-bold text-emerald-800 mb-4 text-center">Вход</h3>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Почта *</label>
+          <input type="email" name="email" value={form.email} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg" required />
+        </div>
+        <div className="mb-3">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Пароль *</label>
+          <input type="password" name="password" value={form.password} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg" required />
+        </div>
+        {error && <div className="text-red-500 text-sm mb-2">{error}</div>}
+        <div className="flex gap-3 justify-center mt-4">
+          <button type="submit" className="py-2 px-4 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold rounded-lg">Войти</button>
+          <button type="button" onClick={onClose} className="py-2 px-4 bg-gray-300 hover:bg-gray-400 text-gray-700 font-semibold rounded-lg">Отмена</button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 
@@ -260,7 +321,6 @@ const mockResults = [
   { id: 9, name: 'Calathea Ornata', latin: 'Калатея Орната', image: 'https://placehold.co/400x400/059669/ffffff?text=Calathea', traits: ['Романтика', 'Необычные узоры', 'Требует влажности', 'Чувствительна к воде'], explanation: 'Для романтичного подарка. Ее листья закрываются ночью, что добавляет ей символики.', details: 'Калатея требует высокой влажности и полива только мягкой, отстоянной водой. Ее листья поднимаются и опускаются в течение дня, следуя за светом.' },
   { id: 10, name: 'Chlorophytum Comosum', latin: 'Хлорофитум Хохлатый', image: 'https://placehold.co/400x400/10B981/ffffff?text=Chlorophytum', traits: ['Сильный очиститель', 'Легко ухаживать', 'Быстро растет', 'Подходит для кухни'], explanation: 'Один из самых эффективных очистителей воздуха, подходит для любой комнаты.', details: 'Хлорофитум вынослив, быстро растет и активно поглощает вредные вещества. Не требует много света, легко переносит забывчивость с поливом.' },
 ];
-
 // --- Компонент Header ---
 
 const Header = ({ favoritesCount, myPlantsCount, onNavigate, userId, userName }) => (
@@ -286,7 +346,15 @@ const Header = ({ favoritesCount, myPlantsCount, onNavigate, userId, userName })
           <User className="w-5 h-5" />
           {userName && <span className="ml-1 text-emerald-700 font-semibold">{userName}</span>}
         </button>
-        <button onClick={() => window.location.reload()} className="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors flex items-center" title="Начать сначала">
+        <button
+          onClick={() => {
+            localStorage.removeItem('userProfile');
+            setUserProfile({});
+            setAppState('home');
+          }}
+          className="text-sm font-medium text-emerald-600 hover:text-emerald-800 transition-colors flex items-center"
+          title="Начать сначала"
+        >
           <RefreshCcw className="w-4 h-4" />
         </button>
       </nav>
@@ -716,7 +784,7 @@ const MyPlantsScreen = ({ myPlants, onUpdatePlant, onRemovePlant, onNavigate }) 
 };
 
 // --- Компонент ProfileScreen ---
-const ProfileScreen = ({ userProfile, onShowAuth }) => {
+const ProfileScreen = ({ userProfile, onShowAuth, onLogout }) => {
   const isRegistered = Boolean(userProfile?.name);
   if (!isRegistered) {
     return (
@@ -736,11 +804,17 @@ const ProfileScreen = ({ userProfile, onShowAuth }) => {
       <div className="space-y-2">
         <div><span className="font-semibold text-emerald-700">Имя:</span> {userProfile?.name || '—'}</div>
         <div><span className="font-semibold text-emerald-700">Почта:</span> {userProfile?.email || '—'}</div>
-        <div><span className="font-semibold text-emerald-700">Дети:</span> {userProfile?.has_children ? 'Да' : 'Нет'}</div>
-        <div><span className="font-semibold text-emerald-700">Животные:</span> {userProfile?.has_pets ? 'Да' : 'Нет'}</div>
+        <div><span className="font-semibold text-emerald-700">Дети:</span> {userProfile?.features.has_children ? 'Да' : 'Нет'}</div>
+        <div><span className="font-semibold text-emerald-700">Животные:</span> {userProfile?.features.has_pets ? 'Да' : 'Нет'}</div>
         <div><span className="font-semibold text-emerald-700">Аллергия на цветы:</span> {userProfile?.has_allergies ? 'Да' : 'Нет'}</div>
-        <div><span className="font-semibold text-emerald-700">Предпочтения:</span> {userProfile?.preferences || '—'}</div>
+        <div><span className="font-semibold text-emerald-700">Предпочтения:</span> {userProfile?.features.preferences || '—'}</div>
       </div>
+      <button
+        onClick={onLogout}
+        className="mt-6 w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold rounded-lg"
+      >
+        Выйти из профиля
+      </button>
     </div>
   );
 };
@@ -845,6 +919,7 @@ const App = () => {
   const [favorites, setFavorites] = useState([]); 
   const [comparisonPlants, setComparisonPlants] = useState([]); 
   const [showAuthWidget, setShowAuthWidget] = useState(false);
+  const [showLoginWidget, setShowLoginWidget] = React.useState(false);
   const [authUser, setAuthUser] = useState(null);
   
   const [db, setDb] = useState(null);
@@ -852,23 +927,18 @@ const App = () => {
   const [userId, setUserId] = useState(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [myPlants, setMyPlants] = useState([]);
-  const [userProfile, setUserProfile] = useState({});
+  // (Удалена очистка localStorage при загрузке страницы)
+  const [userProfile, setUserProfile] = useState(() => {
+    try {
+      const stored = localStorage.getItem('userProfile');
+      return stored ? JSON.parse(stored) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // --- Загрузка профиля пользователя из userProfile.json при старте ---
-  useEffect(() => {
-    async function fetchProfile() {
-      try {
-        const res = await fetch('http://localhost:3001/src/userProfile.json');
-        if (res.ok) {
-          const data = await res.json();
-          setUserProfile(data);
-        }
-      } catch (e) {
-        // ignore if not found
-      }
-    }
-    fetchProfile();
-  }, []);
+  // Удаляем загрузку userProfile.json, теперь профиль только через /api/userinfo после логина/регистрации
 
   // --- FIRESTORE CRUD ---
   const addToMyPlants = useCallback(async (plant) => {
@@ -979,76 +1049,132 @@ const App = () => {
 
   // --- RENDER CONTENT ---
   const renderContent = () => {
-      if (!isAuthReady) return <LoadingScreen />;
-      switch (appState) {
-          case 'home': return (
-              <div className="p-6 bg-white rounded-2xl shadow-xl">
-                  <h2 className="text-3xl font-bold text-emerald-800 mb-4 text-center">Flowers'Choice: Подберите свой идеальный цветок</h2>
-                  <p className="text-emerald-600 text-lg mb-8 text-center">Ответьте на несколько вопросов, и наш сервис найдет растения, которые идеально впишутся в ваш дом или станут прекрасным подарком.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <button onClick={() => selectMode('self')} className="flex flex-col items-center justify-center p-6 text-center h-full rounded-xl border-2 transition-all duration-200 shadow-sm bg-white border-emerald-200 text-emerald-800 hover:border-lime-500 hover:shadow-lg">
-                          <User className="w-8 h-8 mb-2 text-lime-500" />
-                          <span className="text-base font-semibold text-emerald-700">Выбираю для себя</span>
-                      </button>
-                      <button onClick={() => selectMode('gift')} className="flex flex-col items-center justify-center p-6 text-center h-full rounded-xl border-2 transition-all duration-200 shadow-sm bg-white border-emerald-200 text-emerald-800 hover:border-lime-500 hover:shadow-lg">
-                          <Gift className="w-8 h-8 mb-2 text-lime-500" />
-                          <span className="text-base font-semibold text-emerald-700">Выбираю в подарок</span>
-                      </button>
-                  </div>
-                  <p className="text-center text-sm text-emerald-500 mt-6">Начните с выбора режима.</p>
+    if (!isAuthReady) return <LoadingScreen />;
+    switch (appState) {
+      case 'home': return (
+          <div className="p-6 bg-white rounded-2xl shadow-xl">
+              <h2 className="text-3xl font-bold text-emerald-800 mb-4 text-center">Flowers'Choice: Подберите свой идеальный цветок</h2>
+              <p className="text-emerald-600 text-lg mb-8 text-center">Ответьте на несколько вопросов, и наш сервис найдет растения, которые идеально впишутся в ваш дом или станут прекрасным подарком.</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <button onClick={() => selectMode('self')} className="flex flex-col items-center justify-center p-6 text-center h-full rounded-xl border-2 transition-all duration-200 shadow-sm bg-white border-emerald-200 text-emerald-800 hover:border-lime-500 hover:shadow-lg">
+                      <User className="w-8 h-8 mb-2 text-lime-500" />
+                      <span className="text-base font-semibold text-emerald-700">Выбираю для себя</span>
+                  </button>
+                  <button onClick={() => selectMode('gift')} className="flex flex-col items-center justify-center p-6 text-center h-full rounded-xl border-2 transition-all duration-200 shadow-sm bg-white border-emerald-200 text-emerald-800 hover:border-lime-500 hover:shadow-lg">
+                      <Gift className="w-8 h-8 mb-2 text-lime-500" />
+                      <span className="text-base font-semibold text-emerald-700">Выбираю в подарок</span>
+                  </button>
               </div>
+              <p className="text-center text-sm text-emerald-500 mt-6">Начните с выбора режима.</p>
+          </div>
+      );
+      case 'questionnaire': 
+          const currentQuestion = currentQuestions[step - 1];
+          return (
+              <>
+                  <div className="flex justify-center items-center my-8"><div className="text-sm font-medium text-emerald-600">Шаг {step} из {totalSteps}</div></div>
+                  <QuestionStep key={currentQuestion.key} question={currentQuestion} answer={answers} setAnswer={handleSetAnswer} onNext={nextStep} isLastStep={step === totalSteps} />
+              </>
           );
-          case 'questionnaire': 
-              const currentQuestion = currentQuestions[step - 1];
-              return (
-                  <>
-                      <div className="flex justify-center items-center my-8"><div className="text-sm font-medium text-emerald-600">Шаг {step} из {totalSteps}</div></div>
-                      <QuestionStep key={currentQuestion.key} question={currentQuestion} answer={answers} setAnswer={handleSetAnswer} onNext={nextStep} isLastStep={step === totalSteps} />
-                  </>
-              );
-          case 'loading': return <LoadingScreen />;
-          case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
-          case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
-          case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} />;
-          case 'my_plants': return <MyPlantsScreen myPlants={myPlants} onUpdatePlant={updatePlant} onRemovePlant={removePlant} onNavigate={navigate} />;
-          case 'profile': return <ProfileScreen userProfile={userProfile} onShowAuth={setShowAuthWidget} />;
-          case 'ratings': return <RatingsScreen myPlants={myPlants} favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} />;
-          default: return null;
-      }
+      case 'loading': return <LoadingScreen />;
+      case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
+      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
+      case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} />;
+      case 'my_plants': return <MyPlantsScreen myPlants={myPlants} onUpdatePlant={updatePlant} onRemovePlant={removePlant} onNavigate={navigate} />;
+      case 'profile': return <ProfileScreen
+        userProfile={userProfile}
+        onShowAuth={(type) => {
+          if (type === 'login') setShowLoginWidget(true);
+          else setShowAuthWidget(true);
+        }}
+        onLogout={() => {
+          localStorage.removeItem('userProfile');
+          setUserProfile({});
+          setAppState('home');
+        }}
+      />;
+      case 'ratings': return <RatingsScreen myPlants={myPlants} favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} />;
+      default: return null;
+    }
   };
 
   return (
     <div className="min-h-screen bg-emerald-50 flex flex-col font-sans antialiased">
-      <Header favoritesCount={favorites.length} myPlantsCount={myPlants.length} onNavigate={navigate} userId={userId} userName={userProfile?.name} />
+      <Header favoritesCount={favorites.length} myPlantsCount={myPlants.length} onNavigate={navigate} userId={userId} userName={userProfile?.name || ''} />
       <main className="flex-grow p-4 sm:p-8 max-w-4xl w-full mx-auto">
         <div className="w-full h-full flex flex-col justify-center py-8">
           {renderContent()}
         </div>
       </main>
-      {/* Auth placeholder modal (simple stub when showAuthWidget is true) */}
-
+      {/* Модальное окно регистрации */}
       {showAuthWidget && (
-        <AuthModal 
-          onClose={() => setShowAuthWidget(false)} 
+        <AuthModal
+          onClose={() => setShowAuthWidget(false)}
           onRegister={async (userData) => {
-            // Отправляем данные пользователя на сервер
+            let token = null;
             try {
-              await fetch('http://localhost:3001/api/profile', {
+              const res = await fetch('http://localhost:3001/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userData, null, 2)
               });
+              const result = await res.json();
+              if (result.success && result.token) {
+                token = result.token;
+              } else {
+                throw new Error(result.message || 'Ошибка регистрации');
+              }
             } catch (e) {
               console.error('Ошибка сохранения профиля:', e);
+              return;
             }
-            setUserProfile(userData);
+            // Получаем профиль пользователя через /api/userinfo
+            try {
+              const res = await fetch('http://localhost:3001/api/userinfo', {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              const data = await res.json();
+              if (data.success && data.user) {
+                setUserProfile(data.user);
+                localStorage.setItem('userProfile', JSON.stringify(data.user));
+              }
+            } catch (e) {
+              console.error('Ошибка получения профиля:', e);
+            }
             setShowAuthWidget(false);
             navigate('home');
           }}
         />
       )}
-
-
+      {/* Модальное окно логина */}
+      {showLoginWidget && (
+        <LoginModal
+          onClose={() => setShowLoginWidget(false)}
+          onLogin={async (loginResult) => {
+            // loginResult должен содержать token
+            let token = loginResult.token;
+            if (!token && loginResult && loginResult.success && loginResult.token) token = loginResult.token;
+            if (!token) {
+              setShowLoginWidget(false);
+              return;
+            }
+            try {
+              const res = await fetch('http://localhost:3001/api/userinfo', {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              const data = await res.json();
+              if (data.success && data.user) {
+                setUserProfile(data.user);
+                localStorage.setItem('userProfile', JSON.stringify(data.user));
+              }
+            } catch (e) {
+              console.error('Ошибка получения профиля:', e);
+            }
+            setShowLoginWidget(false);
+            navigate('home');
+          }}
+        />
+      )}
       <div className="p-4 text-center text-xs text-gray-400">
           {userId && `Текущий ID пользователя: ${userId}`}
       </div>
@@ -1065,8 +1191,29 @@ const ResultsScreen = ({ favorites, setFavorites, onNavigate }) => {
   const isLastCard = currentPlantIndex === mockResults.length - 1;
   const isLiked = favorites.some(f => f.id === plant?.id);
 
-  const handleLike = () => {
-    if (!isLiked && plant) setFavorites(prev => [...prev, plant]);
+  const handleLike = async () => {
+    if (!isLiked && plant) {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await fetch('http://localhost:3001/api/savefavourites', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ plant_id: plant.id })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          setFavorites(prev => [...prev, plant]);
+        } else {
+          // Можно показать ошибку пользователю, если нужно
+          console.error(result.message || 'Ошибка при добавлении в избранное');
+        }
+      } catch (e) {
+        console.error('Ошибка сети при добавлении в избранное:', e);
+      }
+    }
     handleNext();
   };
   const handleSkip = () => handleNext();

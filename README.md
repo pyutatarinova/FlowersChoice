@@ -20,3 +20,10 @@ python -m venv venv
 venv\Scripts\Activate.ps1
 ```
 
+# Что нужно доставить для запуска Backend
+1) Создать виртуальное окружение с именем venv командной:
+    python -m venv venv
+2) Установить в виртуальное окружение все необходимые библиотеки командой:
+    pip install -r requirements.txt
+3) Запустить сервер командой:
+    python server.py
