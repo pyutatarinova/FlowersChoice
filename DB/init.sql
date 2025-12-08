@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255),
     email VARCHAR(255) UNIQUE,
     password VARCHAR(255),
-    token VARCHAR(255),
+    tocken VARCHAR(255),
     created_at DATE,
     updated_at DATE,
     features JSONB,
