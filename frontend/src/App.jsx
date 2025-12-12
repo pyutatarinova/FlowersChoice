@@ -1015,20 +1015,33 @@ const App = () => {
 
   // --- STUBS for plant actions (replace with backend logic if needed) ---
   const addToMyPlants = useCallback(async (plant) => {
-    if (!userId) return;
-    if (myPlants.some(p => p.originalId === plant.id)) return;
-    setMyPlants(prev => [...prev, {
-      ...plant,
+    if (!plant || !plant.id) return;
+    // Проверяем по id и originalId (на случай разных структур)
+    if (myPlants.some(p => p.originalId === plant.id || p.id === plant.id)) return;
+    // Унифицируем структуру для MyPlants
+    const newPlantData = {
+      id: plant.id, // для локального отображения
       originalId: plant.id,
-      addedAt: new Date(),
-      notes: "",
+      name: plant.name || plant.plant_name || '',
+      latin: plant.latin || plant.plant_name || '',
+      image: plant.image || plant.photo || '',
+      details: plant.details || plant.brief_description || '',
+      traits: plant.traits || {
+        light: plant.light_requirements,
+        water: plant.watering_frequency,
+        temp: plant.comfort_temp,
+        size: plant.mature_size
+      },
+      notes: '',
       rating: 5,
       wateringSchedule: 7,
-      wateringHistory: [new Date()]
-    }]);
+      wateringHistory: [new Date()],
+      addedAt: new Date()
+    };
+    setMyPlants(prev => [...prev, newPlantData]);
     setFavorites(prev => prev.filter(f => f.id !== plant.id));
     navigate('my_plants');
-  }, [userId, myPlants]);
+  }, [myPlants]);
 
   const updatePlant = useCallback(async (docId, data) => {
     setMyPlants(prev => prev.map(p => p.id === docId ? { ...p, ...data } : p));
