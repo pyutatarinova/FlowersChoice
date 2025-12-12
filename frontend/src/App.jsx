@@ -310,16 +310,36 @@ const QUESTIONS = {
 
 // --- Мокированные результаты (10 растений) ---
 const mockResults = [
-  { id: 1, name: "Sansevieria Trifasciata 'Laurentii'", latin: 'Сансевиерия трехполосная', image: 'https://placehold.co/400x400/10B981/ffffff?text=Sansevieria', traits: ['Очищает воздух', 'Низкий уход', 'Теневынослива', 'Суккулент'], ai_choice: true, explanation: 'Ваши требования к неприхотливости и очистке воздуха идеально соответствуют этой "тещиному языку". Она выживет, даже если вы забудете о ней на месяц!', details: 'Сансевиерия не требует частого полива, но ей нужен яркий, непрямой свет. Идеально подходит для начинающих. Высота может достигать 1.5м. Любит рыхлую почву.' },
-  { id: 2, name: 'Zamioculcas Zamiifolia', latin: 'Замиокулькас', image: 'https://placehold.co/400x400/34D399/ffffff?text=Zamioculcas', traits: ['Антистресс', 'Экзотический вид', 'Очень неприхотлив', 'Теневынослив'], explanation: 'Идеальный подарок для коллеги, который не любит часто поливать. Неприхотливый, но выглядит солидно.', details: 'Замиокулькас (долларовое дерево) — самый неприхотливый. Он накапливает воду в клубнях, поэтому его лучше пересушить, чем залить. Идеален для офисов с искусственным светом.' },
-  { id: 3, name: 'Monstera Deliciosa', latin: 'Монстера Деликатесная', image: 'https://placehold.co/400x400/059669/ffffff?text=Monstera', traits: ['Крупные листья', 'Украшение интерьера', 'Умеренный полив', 'Нужна опора'], explanation: 'Подходит для больших помещений и ценителей эффектной зелени.', details: 'Монстера требует умеренного, но регулярного полива. Любит опрыскивание и яркий, рассеянный свет. Может вырасти очень большой, требуя опоры.' },
-  { id: 4, name: 'Ficus Lyrata', latin: 'Фикус Лирата', image: 'https://placehold.co/400x400/10B981/ffffff?text=Ficus', traits: ['Высокий рост', 'Эстетичный вид', 'Требует внимания', 'Не любит перестановки'], explanation: 'Вы хотели выразительное растение. Этот Фикус — идеальное напольное украшение.', details: 'Фикус Лирата чувствителен к перестановкам и сквознякам. Требует яркого света и регулярного полива после просыхания верхнего слоя. Если ему понравится место, вырастет до потолка.' },
-  { id: 5, name: 'Epipremnum Aureum', latin: 'Эпипремнум Золотистый', image: 'https://placehold.co/400x400/34D399/ffffff?text=Epipremnum', traits: ['Подвесное', 'Быстрый рост', 'Простой уход', 'Теневынослив'], explanation: 'Идеален для подвешивания или украшения полки, быстро заполняет пространство зеленью.', details: 'Эпипремнум — ампельное растение, которое прекрасно переносит тень, но быстрее растет на свету. Чем больше света, тем ярче желтые пятна на листьях. Очень прост в уходе.' },
-  { id: 6, name: 'Spathiphyllum', latin: 'Спатифиллум', image: 'https://placehold.co/400x400/059669/ffffff?text=Spathiphyllum', traits: ['Белые цветы', 'Любит влажность', 'Очищает воздух', 'Тропический'], explanation: 'Отличный выбор для ванной комнаты, так как любит высокую влажность.', details: 'Спатифиллум (Женское счастье) любит влажный воздух и умеренный свет. Если листья поникли, значит, пора полить. Цветет белыми "парусами" круглый год.' },
-  { id: 7, name: 'Pilea Peperomioides', latin: 'Пилея Пеперомиевидная', image: 'https://placehold.co/400x400/10B981/ffffff?text=Pilea', traits: ['Круглые листья', 'Настольное', 'Легко размножается', 'Стильный вид'], explanation: 'Минималистичный вид, идеален для офисного стола или в подарок ценителю необычных форм.', details: 'Пилея (Китайское денежное дерево) требует яркого, но рассеянного света и поворота горшка для равномерного роста. Легко дает "деток", которыми можно делиться с друзьями.' },
-  { id: 8, name: 'Aloe Vera', latin: 'Алоэ Вера', image: 'https://placehold.co/400x400/34D399/ffffff?text=Aloe', traits: ['Лечебные свойства', 'Суккулент', 'Подоконник с солнцем', 'Низкий уход'], explanation: 'Если вы забываете поливать, этот суккулент с лечебными свойствами — ваш выбор.', details: 'Алоэ требует максимально яркого света и минимального полива (особенно зимой). Используется в народной медицине для лечения ожогов и порезов.' },
-  { id: 9, name: 'Calathea Ornata', latin: 'Калатея Орната', image: 'https://placehold.co/400x400/059669/ffffff?text=Calathea', traits: ['Романтика', 'Необычные узоры', 'Требует влажности', 'Чувствительна к воде'], explanation: 'Для романтичного подарка. Ее листья закрываются ночью, что добавляет ей символики.', details: 'Калатея требует высокой влажности и полива только мягкой, отстоянной водой. Ее листья поднимаются и опускаются в течение дня, следуя за светом.' },
-  { id: 10, name: 'Chlorophytum Comosum', latin: 'Хлорофитум Хохлатый', image: 'https://placehold.co/400x400/10B981/ffffff?text=Chlorophytum', traits: ['Сильный очиститель', 'Легко ухаживать', 'Быстро растет', 'Подходит для кухни'], explanation: 'Один из самых эффективных очистителей воздуха, подходит для любой комнаты.', details: 'Хлорофитум вынослив, быстро растет и активно поглощает вредные вещества. Не требует много света, легко переносит забывчивость с поливом.' },
+  {
+    id: 1,
+    plant_name: "Monstera Deliciosa",
+    photo: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6",
+    light_requirements: "Bright Indirect Light",
+    watering_frequency: "Water when the top 2–3 cm of soil are dry; about once a week in growing season",
+    comfort_temp: "18–27°C",
+    mature_size: "Climbing or trailing up to 2–3m indoors with support",
+    brief_description: "Iconic Monstera with perforated leaves that brings a jungle feel indoors."
+  },
+  {
+    id: 2,
+    plant_name: "Snake Plant (Sansevieria)",
+    photo: "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?auto=format",
+    light_requirements: "Low to Bright Indirect Light",
+    watering_frequency: "Water every 2–3 weeks; allow soil to fully dry",
+    comfort_temp: "15–29°C",
+    mature_size: "60–100 cm tall depending on variety",
+    brief_description: "Very resilient plant, great for beginners. Tolerates neglect and low light."
+  },
+  {
+    id: 3,
+    plant_name: "Pothos Golden",
+    photo: "https://images.unsplash.com/photo-1469474968028-56623f02e42e",
+    light_requirements: "Low to Medium Indirect Light",
+    watering_frequency: "Water when top 2 cm of soil are dry; roughly every 7–10 days",
+    comfort_temp: "18–30°C",
+    mature_size: "Trailing up to 2m indoors",
+    brief_description: "Fast-growing vine with heart-shaped leaves. Great for shelves and hanging pots."
+  }
 ];
 // --- Компонент Header ---
 
@@ -368,6 +388,16 @@ const QuestionStep = ({ question, answer, setAnswer, onNext, isLastStep }) => {
   const initialData = answer[question.key] || { text: '', tags: [] };
   const [textAreaValue, setTextAreaValue] = useState(initialData.text);
   const [selectedTags, setSelectedTags] = useState(initialData.tags);
+
+  // Сохраняем автоматически при изменении
+  useEffect(() => {
+    setAnswer({
+      [question.key]: {
+        text: textAreaValue,
+        tags: selectedTags
+      }
+    });
+  }, [textAreaValue, selectedTags]);
   
   const toggleTag = (tag) => {
     setSelectedTags(prev => 
@@ -379,6 +409,19 @@ const QuestionStep = ({ question, answer, setAnswer, onNext, isLastStep }) => {
   
   const isAnswered = isLastStep ? true : (textAreaValue.trim().length > 0 || selectedTags.length > 0);
   const buttonText = isLastStep ? 'Сгенерировать подборку' : 'Далее';
+
+  const handleNextClick = () => {
+    // ❗ ГАРАНТИРУЕМ СОХРАНЕНИЕ ПЕРЕД ПЕРЕХОДОМ
+    setAnswer({
+      [question.key]: {
+        text: textAreaValue,
+        tags: selectedTags
+      }
+    });
+
+    // Теперь можно переходить
+    onNext();
+  };
 
   return (
     <div className="p-6 bg-white rounded-2xl shadow-xl max-w-lg mx-auto">
@@ -408,8 +451,7 @@ const QuestionStep = ({ question, answer, setAnswer, onNext, isLastStep }) => {
               ${selectedTags.includes(option.value)
                 ? 'bg-lime-500 text-white shadow-md'
                 : 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-              }
-            `}
+              }`}
           >
             {option.label}
           </button>
@@ -418,10 +460,7 @@ const QuestionStep = ({ question, answer, setAnswer, onNext, isLastStep }) => {
 
       <div className="flex justify-end mt-8">
         <button
-          onClick={() => {
-            setAnswer({ [question.key]: { text: textAreaValue, tags: selectedTags } });
-            onNext();
-          }}
+          onClick={handleNextClick}
           disabled={!isAnswered}
           className={`
             py-3 px-6 font-bold rounded-xl transition-all shadow-md flex items-center justify-center
@@ -456,16 +495,19 @@ const LoadingScreen = () => (
 // --- Компонент FlowerResultCard ---
 const FlowerResultCard = ({ plant, onLike, onSkip, isLiked }) => (
   <div className="bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col md:flex-row mb-6 border border-emerald-100">
+    
+    {/* фото + имя */}
     <div className="md:w-1/3 p-4 flex flex-col items-center justify-center bg-emerald-50">
       <img
-        src={plant.image}
-        alt={plant.name}
+        src={plant.photo}
+        alt={plant.plant_name}
         className="w-full h-auto object-cover rounded-xl shadow-md"
-        onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/400x400/ccc/333?text=Plant+Image" }}
+        onError={(e) => { e.target.src = "https://placehold.co/400x400/ccc/333?text=No+Image"; }}
       />
-      <h3 className="text-xl font-bold text-emerald-800 mt-3 text-center">{plant.name}</h3>
-      <p className="text-xs italic text-emerald-500">{plant.latin}</p>
-      
+      <h3 className="text-xl font-bold text-emerald-800 mt-3 text-center">
+        {plant.plant_name}
+      </h3>
+
       {plant.ai_choice && (
         <span className="mt-2 inline-flex items-center px-3 py-1 bg-lime-500 text-white text-sm font-semibold rounded-full shadow-lg">
           <Zap className="w-4 h-4 mr-1" />
@@ -474,20 +516,20 @@ const FlowerResultCard = ({ plant, onLike, onSkip, isLiked }) => (
       )}
     </div>
 
+    {/* параметры */}
     <div className="md:w-2/3 p-6 flex flex-col justify-between">
+
       <div>
-        <h4 className="text-lg font-semibold text-emerald-700 mb-3 border-b pb-2">Основные признаки:</h4>
-        <div className="flex flex-wrap gap-2 mb-4">
-          {plant.traits.map(trait => (
-            <span key={trait} className="px-3 py-1 text-sm bg-emerald-100 text-emerald-700 rounded-full font-medium">
-              {trait}
-            </span>
-          ))}
+        <div className="space-y-2 text-emerald-700">
+          <p><span className="font-bold">💡 Свет:</span> {plant.light_requirements}</p>
+          <p><span className="font-bold">💧 Полив:</span> {plant.watering_frequency}</p>
+          <p><span className="font-bold">🌡 Температура:</span> {plant.comfort_temp}</p>
+          <p><span className="font-bold">📏 Размер:</span> {plant.mature_size}</p>
         </div>
 
-        <h4 className="text-lg font-semibold text-emerald-700 mb-2 mt-4">Пояснение ИИ:</h4>
+        <h4 className="text-lg font-semibold text-emerald-700 mb-2 mt-4">Описание:</h4>
         <p className="text-emerald-600 italic leading-relaxed bg-lime-50 p-3 rounded-lg border-l-4 border-lime-400">
-          {plant.explanation}
+          {plant.brief_description}
         </p>
       </div>
 
@@ -505,6 +547,7 @@ const FlowerResultCard = ({ plant, onLike, onSkip, isLiked }) => (
           <ThumbsUp className="w-5 h-5 mr-2" />
           {isLiked ? 'В избранном' : 'Нравится'}
         </button>
+
         <button
           onClick={onSkip}
           className="flex-1 py-3 px-6 font-bold rounded-xl transition-all shadow-md bg-emerald-200 text-emerald-700 hover:bg-emerald-300 flex items-center justify-center"
@@ -513,6 +556,7 @@ const FlowerResultCard = ({ plant, onLike, onSkip, isLiked }) => (
           Пропустить
         </button>
       </div>
+
     </div>
   </div>
 );
@@ -548,34 +592,56 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
     
     if (winner) {
         const finalWinner = mockResults.find(p => p.id === winner);
-        return (
-            <div className="text-center p-8 bg-white rounded-2xl shadow-2xl max-w-lg mx-auto">
-                <Gift className="w-12 h-12 text-lime-600 mx-auto mb-4" />
-                <h3 className="text-3xl font-bold text-emerald-800 mb-3">Победитель Сравнения!</h3>
-                <h4 className="text-2xl font-bold text-lime-700 mb-4">{finalWinner.name}</h4>
-                <img 
-                    src={finalWinner.image} 
-                    alt={finalWinner.name}
-                    className="w-48 h-48 object-cover rounded-xl mx-auto mb-4 shadow-md"
-                />
-                <p className="text-emerald-600 mb-6">{finalWinner.explanation}</p>
-                <button
-                    onClick={() => { onAddToMyPlants(finalWinner); onFinishComparison(); }}
-                    className="w-full py-3 px-6 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-300/50 flex items-center justify-center mx-auto mb-3"
-                >
-                    <Plus className="w-5 h-5 mr-2" />
-                    Добавить в Мои растения
-                </button>
-                <button
-                    onClick={onFinishComparison}
-                    className="w-full py-3 px-6 bg-lime-500 text-white font-bold rounded-xl hover:bg-lime-600 transition-all shadow-lg shadow-lime-300/50"
-                >
-                    <ChevronRight className="w-5 h-5 inline mr-2" />
-                    Вернуться в Избранное
-                </button>
-            </div>
-        );
+
+    if (!finalWinner) {
+        return <div className="p-8 text-center text-red-500">Ошибка: победитель не найден</div>;
     }
+
+    return (
+        <div className="text-center p-8 bg-white rounded-2xl shadow-2xl max-w-lg mx-auto">
+            <Gift className="w-12 h-12 text-lime-600 mx-auto mb-4" />
+
+            <h3 className="text-3xl font-bold text-emerald-800 mb-3">
+                Победитель Сравнения!
+            </h3>
+
+            <h4 className="text-2xl font-bold text-lime-700 mb-4">
+                {finalWinner.plant_name}
+            </h4>
+
+            <img
+                src={finalWinner.photo}
+                alt={finalWinner.plant_name}
+                className="w-48 h-48 object-cover rounded-xl mx-auto mb-4 shadow-md"
+            />
+
+            <p className="text-emerald-600 mb-4">
+                {finalWinner.brief_description}
+            </p>
+
+            <div className="text-sm text-emerald-700 space-y-1 mb-6">
+                <p><b>💡 Свет:</b> {finalWinner.light_requirements}</p>
+                <p><b>💧 Полив:</b> {finalWinner.watering_frequency}</p>
+                <p><b>🌡 Темп.:</b> {finalWinner.comfort_temp}</p>
+                <p><b>📏 Размер:</b> {finalWinner.mature_size}</p>
+            </div>
+
+            <button
+                onClick={() => { onAddToMyPlants(finalWinner); onFinishComparison(); }}
+                className="w-full py-3 px-6 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition"
+            >
+                Добавить в Мои растения
+            </button>
+
+            <button
+                onClick={onFinishComparison}
+                className="w-full mt-3 py-3 px-6 bg-lime-500 text-white font-bold rounded-xl hover:bg-lime-600 transition"
+            >
+                Вернуться в Избранное
+            </button>
+        </div>
+    );
+}
     
     if (!leftPlant || !rightPlant) {
         return <div className="text-center text-lg p-8">Недостаточно растений для сравнения. Выберите хотя бы два.</div>;
@@ -600,36 +666,39 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
 // --- Компонент ComparisonCard ---
 
 const ComparisonCard = ({ plant, isLeft, onSelect }) => (
-    <div 
-        onClick={() => onSelect(plant)}
-        className={`bg-white rounded-2xl shadow-xl p-6 border-4 cursor-pointer transition-all duration-300 transform hover:scale-[1.02] text-center flex flex-col items-center 
-            ${isLeft ? 'border-lime-300 hover:border-lime-500' : 'border-red-300 hover:border-red-500'}
-        `}
-    >
-        <img 
-            src={plant.image} 
-            alt={plant.name}
-            className="w-36 h-36 object-cover rounded-xl mb-4 shadow-md"
-        />
-        <h3 className="text-2xl font-bold text-emerald-800 mb-2">{plant.name}</h3>
-        <p className="text-md italic text-emerald-500 mb-4">{plant.latin}</p>
-        <div className="border-t pt-4 w-full">
-            <h4 className="font-semibold text-emerald-700 mb-2">Характеристики:</h4>
-            <ul className="text-sm text-emerald-600 space-y-1 text-left inline-block">
-                {plant.traits.map(trait => <li key={trait} className="flex items-center"><ChevronRight className="w-3 h-3 mr-1 text-lime-500" />{trait}</li>)}
-            </ul>
-            <p className="mt-4 text-xs italic text-emerald-500 bg-emerald-50 p-2 rounded-lg">
-                {plant.explanation}
-            </p>
-        </div>
-        <div className="mt-6 w-full">
-            <button className={`w-full py-3 font-bold rounded-xl text-white shadow-lg 
-                ${isLeft ? 'bg-lime-500 hover:bg-lime-600' : 'bg-red-500 hover:bg-red-600'}
-            `}>
-                Выбрать!
-            </button>
-        </div>
+  <div
+    onClick={() => onSelect(plant)}
+    className={`bg-white rounded-2xl shadow-xl p-6 border-4 cursor-pointer transition-all duration-300 hover:scale-[1.02] text-center
+      ${isLeft ? 'border-lime-300 hover:border-lime-500' : 'border-red-300 hover:border-red-500'}
+    `}
+  >
+    <img
+      src={plant.photo}
+      alt={plant.plant_name}
+      className="w-36 h-36 object-cover rounded-xl mb-4 shadow-md"
+    />
+
+    <h3 className="text-2xl font-bold text-emerald-800 mb-2">{plant.plant_name}</h3>
+
+    <div className="text-left text-sm text-emerald-700 space-y-1">
+      <p><b>💡 Свет:</b> {plant.light_requirements}</p>
+      <p><b>💧 Полив:</b> {plant.watering_frequency}</p>
+      <p><b>🌡 Темп.:</b> {plant.comfort_temp}</p>
+      <p><b>📏 Размер:</b> {plant.mature_size}</p>
     </div>
+
+    <p className="mt-4 text-xs italic text-emerald-500 bg-emerald-50 p-2 rounded-lg">
+      {plant.brief_description}
+    </p>
+
+    <button
+      className={`w-full mt-6 py-3 font-bold rounded-xl text-white shadow-lg 
+        ${isLeft ? 'bg-lime-500 hover:bg-lime-600' : 'bg-red-500 hover:bg-red-600'}
+      `}
+    >
+      Выбрать!
+    </button>
+  </div>
 );
 
 
@@ -878,35 +947,59 @@ const RatingsScreen = ({ myPlants, favorites, setFavorites, onNavigate, onAddToM
 };
 
 const RatingPlantCard = ({ plant, isFavorite, onToggleDetails, isDetailed, onAddToFavorites }) => {
-    return (
-        <div className="bg-white rounded-xl shadow-lg border border-emerald-100 mb-4 transition-all duration-300 overflow-hidden">
-            <div className="p-4 flex items-center justify-between">
-                <div className="w-8/12 flex items-center space-x-4">
-                    <img src={plant.image} alt={plant.name} className="w-12 h-12 object-cover rounded-lg"/>
-                    <div>
-                        <h4 className="text-lg font-semibold text-emerald-800">{plant.name}</h4>
-                        <div className="flex items-center mt-1">
-                            {[1, 2, 3, 4, 5].map(r => <Star key={r} className={`w-5 h-5 ${plant.rating >= r ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`}/>)}
-                        </div>
-                    </div>
-                </div>
-                <div className="w-4/12 flex justify-end space-x-2">
-                    <button onClick={() => onAddToFavorites()} disabled={isFavorite} className={`p-2 rounded-full transition-colors ${isFavorite ? 'bg-red-100 text-red-300' : 'bg-red-100 text-red-600 hover:bg-red-200'}`} title="Добавить в избранное">
-                        <Heart className="w-5 h-5"/>
-                    </button>
-                    <button onClick={() => onToggleDetails(plant.id)} className="p-2 bg-lime-100 text-lime-600 rounded-full hover:bg-lime-200 transition-colors" title="Подробнее">
-                        {isDetailed ? <Minus className="w-5 h-5"/> : <ChevronRight className="w-5 h-5"/>}
-                    </button>
-                </div>
+  return (
+    <div className="bg-white rounded-xl shadow-lg border border-emerald-100 mb-4 overflow-hidden">
+
+      <div className="p-4 flex items-center justify-between">
+
+        <div className="w-8/12 flex items-center space-x-4">
+          <img src={plant.photo} alt={plant.plant_name} className="w-12 h-12 object-cover rounded-lg" />
+          <div>
+            <h4 className="text-lg font-semibold text-emerald-800">{plant.plant_name}</h4>
+
+            <div className="flex items-center mt-1">
+              {[1,2,3,4,5].map(r => 
+                <Star key={r} className={`w-5 h-5 ${plant.rating >= r ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} />
+              )}
             </div>
-            {isDetailed && (
-                <div className="p-4 pt-0 border-t border-emerald-100 bg-emerald-50">
-                    <p className="text-sm font-semibold text-emerald-700 mb-2">Подробная информация:</p>
-                    <p className="text-sm text-emerald-600">{plant.details}</p>
-                </div>
-            )}
+          </div>
         </div>
-    );
+
+        <div className="w-4/12 flex justify-end space-x-2">
+          <button
+            onClick={onAddToFavorites}
+            disabled={isFavorite}
+            className={`p-2 rounded-full ${isFavorite ? 'bg-red-100 text-red-300' : 'bg-red-100 text-red-600 hover:bg-red-200'}`}
+          >
+            <Heart className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={() => onToggleDetails(plant.id)}
+            className="p-2 bg-lime-100 text-lime-600 rounded-full hover:bg-lime-200"
+          >
+            {isDetailed ? <Minus className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+          </button>
+        </div>
+
+      </div>
+
+      {isDetailed && (
+        <div className="p-4 pt-0 border-t border-emerald-100 bg-emerald-50">
+          <p className="text-sm mb-2 text-emerald-700"><b>Описание:</b> {plant.brief_description}</p>
+
+          <div className="text-sm text-emerald-600 space-y-1">
+            <p><b>💡 Свет:</b> {plant.light_requirements}</p>
+            <p><b>💧 Полив:</b> {plant.watering_frequency}</p>
+            <p><b>🌡 Темп.:</b> {plant.comfort_temp}</p>
+            <p><b>📏 Размер:</b> {plant.mature_size}</p>
+          </div>
+
+        </div>
+      )}
+
+    </div>
+  );
 };
 
 // --- Главный компонент App ---
@@ -945,10 +1038,10 @@ const App = () => {
     if (!db || !userId) return;
     if (myPlants.some(p => p.originalId === plant.id)) return;
 
-    const newPlantData = {
-      originalId: plant.id, name: plant.name, latin: plant.latin, image: plant.image, details: plant.details, traits: plant.traits,
-      notes: "", rating: 5, wateringSchedule: 7, wateringHistory: [new Date()], addedAt: new Date(),
-    };
+    const newPlantData = {originalId: plant.id, name: plant.plant_name, latin: plant.plant_name, image: plant.photo, details: plant.brief_description,
+      traits: { light: plant.light_requirements, water: plant.watering_frequency, temp: plant.comfort_temp, size: plant.mature_size },
+      notes: "", rating: 5, wateringSchedule: 7, wateringHistory: [new Date()], addedAt: new Date() };
+
     try {
       await addDoc(collection(db, `artifacts/${appId}/users/${userId}/my_plants`), newPlantData);
       setFavorites(prev => prev.filter(f => f.id !== plant.id));
@@ -1037,9 +1130,29 @@ const App = () => {
 
   const handleSetAnswer = (newAnswer) => setAnswers((prev) => ({ ...prev, ...newAnswer }));
 
-  const handleGenerate = () => {
-    setIsLoading(true); setAppState('loading');
-    setTimeout(() => { setIsLoading(false); setAppState('results'); }, 2500);
+  const handleGenerate = async () => {
+    setIsLoading(true);
+    setAppState('loading');
+
+    try {
+      const response = await fetch("http://localhost:3001/api/generatePlants", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(answers)
+      });
+
+      const data = await response.json();
+
+      mockResults.length = 0;
+      data.forEach(p => mockResults.push(p));
+
+      setIsLoading(false);
+      setAppState("results");
+    } catch (e) {
+      console.error("Ошибка API:", e);
+      setIsLoading(false);
+      setAppState("results");
+    }
   };
   
   const handleFinishComparison = () => { setComparisonPlants([]); navigate('favorites'); };
@@ -1205,8 +1318,8 @@ const ResultsScreen = ({ favorites, setFavorites, onNavigate }) => {
           body: JSON.stringify({ plant_id: plant.id })
         });
         const result = await response.json();
+        setFavorites(prev => [...prev, plant]);
         if (response.ok) {
-          setFavorites(prev => [...prev, plant]);
         } else {
           // Можно показать ошибку пользователю, если нужно
           console.error(result.message || 'Ошибка при добавлении в избранное');
@@ -1253,31 +1366,63 @@ const FinalModal = ({ favoritesCount, onNavigate }) => (
 
 const FavoriteItem = ({ plant, onRemove, onToggleDetails, isDetailed, onToggleSelect, isSelected, onAddToMyPlants }) => {
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-emerald-100 mb-4 transition-all duration-300 overflow-hidden">
+    <div className="bg-white rounded-xl shadow-lg border border-emerald-100 mb-4 overflow-hidden">
+
       <div className="p-4 flex items-center justify-between">
+        
         <div className="w-1/12">
-            <input type="checkbox" checked={isSelected} onChange={() => onToggleSelect(plant.id)} className="w-5 h-5 text-lime-500 bg-gray-100 border-gray-300 rounded focus:ring-lime-500 cursor-pointer" />
+          <input 
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => onToggleSelect(plant.id)}
+            className="w-5 h-5 text-lime-500 bg-gray-100 border-gray-300 rounded focus:ring-lime-500 cursor-pointer"
+          />
         </div>
+
         <div className="w-6/12 flex items-center space-x-4">
-            <img src={plant.image} alt={plant.name} className="w-12 h-12 object-cover rounded-lg" onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/100x100/ccc/333?text=Img" }}/>
-            <div>
-                <h4 className="text-lg font-semibold text-emerald-800">{plant.name}</h4>
-                <p className="text-xs italic text-emerald-500">{plant.latin}</p>
-            </div>
+          <img
+            src={plant.photo}
+            alt={plant.plant_name}
+            className="w-12 h-12 object-cover rounded-lg"
+            onError={(e) => { e.target.src = "https://placehold.co/100x100/ccc/333?text=Img" }}
+          />
+          <div>
+            <h4 className="text-lg font-semibold text-emerald-800">
+              {plant.plant_name}
+            </h4>
+          </div>
         </div>
+
         <div className="w-5/12 flex justify-end space-x-2">
-            <button onClick={() => onAddToMyPlants(plant)} className="p-2 bg-emerald-100 text-emerald-600 rounded-full hover:bg-emerald-200 transition-colors" title="Добавить в Мои растения"><Plus className="w-5 h-5" /></button>
-            <button onClick={() => onToggleDetails(plant.id)} className="p-2 bg-lime-100 text-lime-600 rounded-full hover:bg-lime-200 transition-colors" title="Больше сведений">{isDetailed ? <Minus className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}</button>
-            <button onClick={() => onRemove(plant.id)} className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition-colors" title="Удалить из избранного"><X className="w-5 h-5" /></button>
+
+          <button onClick={() => onAddToMyPlants(plant)} className="p-2 bg-emerald-100 text-emerald-600 rounded-full hover:bg-emerald-200">
+            <Plus className="w-5 h-5" />
+          </button>
+
+          <button onClick={() => onToggleDetails(plant.id)} className="p-2 bg-lime-100 text-lime-600 rounded-full hover:bg-lime-200">
+            {isDetailed ? <Minus className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+          </button>
+
+          <button onClick={() => onRemove(plant.id)} className="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200">
+            <X className="w-5 h-5" />
+          </button>
+
         </div>
       </div>
+
       {isDetailed && (
         <div className="p-4 pt-0 border-t border-emerald-100 bg-emerald-50">
-            <p className="text-sm font-semibold text-emerald-700 mb-2">Подробная информация:</p>
-            <p className="text-sm text-emerald-600">{plant.details}</p>
-            <div className="mt-3 flex flex-wrap gap-2">{plant.traits.map(trait => <span key={trait} className="px-2 py-0.5 text-xs bg-lime-200 text-lime-800 rounded-full font-medium">{trait}</span>)}</div>
+          <p className="text-sm text-emerald-700 mb-2"><b>Описание:</b> {plant.brief_description}</p>
+
+          <div className="space-y-1 text-emerald-600 text-sm">
+            <p><b>💡 Свет:</b> {plant.light_requirements}</p>
+            <p><b>💧 Полив:</b> {plant.watering_frequency}</p>
+            <p><b>🌡 Темпер.:</b> {plant.comfort_temp}</p>
+            <p><b>📏 Размер:</b> {plant.mature_size}</p>
+          </div>
         </div>
       )}
+
     </div>
   );
 };
