@@ -1158,6 +1158,7 @@ const App = () => {
               setShowLoginWidget(false);
               return;
             }
+            localStorage.setItem('authToken', token);
             try {
               const res = await fetch('http://localhost:3001/api/userinfo', {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -1194,7 +1195,7 @@ const ResultsScreen = ({ favorites, setFavorites, onNavigate }) => {
   const handleLike = async () => {
     if (!isLiked && plant) {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('authToken');
         const response = await fetch('http://localhost:3001/api/savefavourites', {
           method: 'POST',
           headers: {
