@@ -135,25 +135,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 
 // --- FIREBASE IMPORTS (MANDATORY GLOBALS) ---
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, deleteDoc, query, addDoc, arrayUnion } from 'firebase/firestore';
-import { setLogLevel } from 'firebase/firestore'; // For debugging
 
-// --- FIX: define globals for local run ---
-const __app_id = 'local-dev';
-const __firebase_config = JSON.stringify({
-  apiKey: "fake-api-key",
-  authDomain: "fake.firebaseapp.com",
-  projectId: "fake-project",
-});
-const __initial_auth_token = 'fake-token';
-
-
-// Firebase globals (MUST BE USED)
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
 
 // --- Утилиты для работы с датами и статистикой ---
 const formatDate = (timestamp) => {
@@ -854,7 +836,7 @@ const MyPlantsScreen = ({ myPlants, onUpdatePlant, onRemovePlant, onNavigate }) 
 
 // --- Компонент ProfileScreen ---
 const ProfileScreen = ({ userProfile, onShowAuth, onLogout }) => {
-  const isRegistered = Boolean(userProfile?.name);
+  const isRegistered = Boolean(userProfile?.name && userProfile?.name != 'Гость');
   if (!isRegistered) {
     return (
       <div className="p-6 bg-white rounded-2xl shadow-xl max-w-lg mx-auto text-center">
@@ -1015,10 +997,7 @@ const App = () => {
   const [showLoginWidget, setShowLoginWidget] = React.useState(false);
   const [authUser, setAuthUser] = useState(null);
   
-  const [db, setDb] = useState(null);
-  const [auth, setAuth] = useState(null);
   const [userId, setUserId] = useState(null);
-  const [isAuthReady, setIsAuthReady] = useState(false);
   const [myPlants, setMyPlants] = useState([]);
   // (Удалена очистка localStorage при загрузке страницы)
   const [userProfile, setUserProfile] = useState(() => {
@@ -1033,80 +1012,37 @@ const App = () => {
   // --- Загрузка профиля пользователя из userProfile.json при старте ---
   // Удаляем загрузку userProfile.json, теперь профиль только через /api/userinfo после логина/регистрации
 
-  // --- FIRESTORE CRUD ---
+
+  // --- STUBS for plant actions (replace with backend logic if needed) ---
   const addToMyPlants = useCallback(async (plant) => {
-    if (!db || !userId) return;
+    if (!userId) return;
     if (myPlants.some(p => p.originalId === plant.id)) return;
+    setMyPlants(prev => [...prev, {
+      ...plant,
+      originalId: plant.id,
+      addedAt: new Date(),
+      notes: "",
+      rating: 5,
+      wateringSchedule: 7,
+      wateringHistory: [new Date()]
+    }]);
+    setFavorites(prev => prev.filter(f => f.id !== plant.id));
+    navigate('my_plants');
+  }, [userId, myPlants]);
 
-    const newPlantData = {originalId: plant.id, name: plant.plant_name, latin: plant.plant_name, image: plant.photo, details: plant.brief_description,
-      traits: { light: plant.light_requirements, water: plant.watering_frequency, temp: plant.comfort_temp, size: plant.mature_size },
-      notes: "", rating: 5, wateringSchedule: 7, wateringHistory: [new Date()], addedAt: new Date() };
-
-    try {
-      await addDoc(collection(db, `artifacts/${appId}/users/${userId}/my_plants`), newPlantData);
-      setFavorites(prev => prev.filter(f => f.id !== plant.id));
-      navigate('my_plants');
-    } catch (e) { console.error("Error adding document: ", e); }
-  }, [db, userId, myPlants]);
-  
   const updatePlant = useCallback(async (docId, data) => {
-    if (!db || !userId) return;
-    try {
-      await updateDoc(doc(db, `artifacts/${appId}/users/${userId}/my_plants`, docId), data);
-    } catch (e) { console.error("Error updating document: ", e); }
-  }, [db, userId]);
+    setMyPlants(prev => prev.map(p => p.id === docId ? { ...p, ...data } : p));
+  }, []);
 
   const removePlant = useCallback(async (docId) => {
-    if (!db || !userId) return;
-    try {
-      await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/my_plants`, docId));
-    } catch (e) { console.error("Error removing document: ", e); }
-  }, [db, userId]);
-  
-  const updateUserProfile = useCallback(async (data) => {
-    if (!db || !userId) return;
-    try {
-        await setDoc(doc(db, `artifacts/${appId}/users/${userId}/profile`, 'user_data'), data, { merge: true });
-    } catch (e) { console.error("Error updating profile: ", e); }
-  }, [db, userId]);
-
-  // --- FIREBASE SETUP ---
-  useEffect(() => {
-    if (!firebaseConfig) return;
-    try {
-      setLogLevel('debug');
-      const app = initializeApp(firebaseConfig);
-      const firestore = getFirestore(app);
-      const authService = getAuth(app);
-      setDb(firestore);
-      setAuth(authService);
-
-      const authenticate = async () => {
-        if (initialAuthToken) await signInWithCustomToken(authService, initialAuthToken);
-        else await signInAnonymously(authService);
-      };
-
-      const unsubscribe = onAuthStateChanged(authService, (user) => {
-        setUserId(user ? user.uid : crypto.randomUUID());
-        setIsAuthReady(true);
-      });
-
-      authenticate();
-      return () => unsubscribe();
-    } catch (error) { console.error("Firebase initialization failed:", error); }
+    setMyPlants(prev => prev.filter(p => p.id !== docId));
   }, []);
-  
-  // --- FIRESTORE DATA LISTENERS ---
-  useEffect(() => {
-    if (!db || !isAuthReady || !userId) return;
-    const plantsUnsubscribe = onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/my_plants`)), (snapshot) => {
-      setMyPlants(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-    }, (error) => console.error("Error fetching my plants:", error));
-    const profileUnsubscribe = onSnapshot(doc(db, `artifacts/${appId}/users/${userId}/profile`, 'user_data'), (doc) => {
-        setUserProfile(doc.exists() ? doc.data() : { name: 'Гость', traits: {} });
-    }, (error) => console.error("Error fetching profile:", error));
-    return () => { plantsUnsubscribe(); profileUnsubscribe(); };
-  }, [db, isAuthReady, userId]);
+
+  const updateUserProfile = useCallback(async (data) => {
+    setUserProfile(prev => ({ ...prev, ...data }));
+  }, []);
+
+
 
   // --- NAVIGATION & UTILS ---
   const currentQuestions = useMemo(() => mode ? QUESTIONS[mode] : [], [mode]);
@@ -1162,7 +1098,7 @@ const App = () => {
 
   // --- RENDER CONTENT ---
   const renderContent = () => {
-    if (!isAuthReady) return <LoadingScreen />;
+
     switch (appState) {
       case 'home': return (
           <div className="p-6 bg-white rounded-2xl shadow-xl">
