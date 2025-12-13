@@ -1186,6 +1186,7 @@ const App = () => {
               console.error('Ошибка сохранения профиля:', e);
               return;
             }
+            localStorage.setItem('userToken', token);
             // Получаем профиль пользователя через /api/userinfo
             try {
               const res = await fetch('http://localhost:3001/api/userinfo', {
@@ -1196,8 +1197,17 @@ const App = () => {
                 setUserProfile(data.user);
                 localStorage.setItem('userProfile', JSON.stringify(data.user));
               }
+              
+              // Загружаем избранные растения пользователя (для нового пользователя пустой список)
+              const favRes = await fetch('http://localhost:3001/api/userfavoriteplants', {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              const favData = await favRes.json();
+              if (favData && Array.isArray(favData)) {
+                setFavorites(favData);
+              }
             } catch (e) {
-              console.error('Ошибка получения профиля:', e);
+              console.error('Ошибка получения профиля или избранных:', e);
             }
             setShowAuthWidget(false);
             navigate('home');
@@ -1226,8 +1236,17 @@ const App = () => {
                 setUserProfile(data.user);
                 localStorage.setItem('userProfile', JSON.stringify(data.user));
               }
+              
+              // Загружаем избранные растения пользователя
+              const favRes = await fetch('http://localhost:3001/api/userfavoriteplants', {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+              const favData = await favRes.json();
+              if (favData && Array.isArray(favData)) {
+                setFavorites(favData);
+              }
             } catch (e) {
-              console.error('Ошибка получения профиля:', e);
+              console.error('Ошибка получения профиля или избранных:', e);
             }
             setShowLoginWidget(false);
             navigate('home');

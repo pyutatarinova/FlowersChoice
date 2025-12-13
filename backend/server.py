@@ -11,6 +11,7 @@ import jwt
 from functools import wraps
 import sys
 from pathlib import Path
+from typing import List, Tuple, Dict, Any
 
 # Add ml_services to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "ml_services"))
@@ -314,6 +315,67 @@ def add_my_plant(user_payload):
     except Exception as e:
         print("Ошибка при добавлении растения:", e)
         return jsonify({"success": False, "message": "Ошибка сохранения в БД"}), 500
+    
+
+@app.route('/api/userfavoriteplants', methods=['GET'])
+@auth_required
+def user_my_plants(user_payload):
+    user_id = user_payload.get("user_id")
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+
+        # 1. Получаем plant_id всех избранных растений пользователя
+        cursor.execute("""
+            SELECT plant_id
+            FROM user_plants
+            WHERE user_id = %s AND favorite = TRUE
+        """, (user_id,))
+
+        rows = cursor.fetchall()
+
+        if not rows:
+            return jsonify({
+                "success": True,
+                "plants": []
+            })
+
+        plant_ids = [row[0] for row in rows]
+
+        # 2. Получаем данные растений из таблицы plants
+        cursor.execute("""
+            SELECT id, name, features
+            FROM plants
+            WHERE id = ANY(%s)
+        """, (plant_ids,))
+
+        plants_rows = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+        
+        results: List[Dict[str, Any]] = []
+        for r in plants_rows:
+            results.append({
+                'id': int(r[0]),
+                'name': r[1],
+                'features': r[2],
+            })
+
+        # 3. Формируем ответ
+        formatted_results = []
+        for plant in results:
+            formatted_plant = _format_plant_response(plant)
+            formatted_results.append(formatted_plant)
+        return jsonify(formatted_results)
+
+    except Exception as e:
+        print("Ошибка в /api/userfavoriteplants:", e)
+        return jsonify({
+            "success": False,
+            "message": "Ошибка получения избранных растений"
+        }), 500
 
 
 # -----------------------------
@@ -417,6 +479,12 @@ def _format_plant_response(plant_data: dict) -> dict:
     ]
     
     features = plant_data.get('features') or {}
+    if isinstance(features, str):
+        try:
+            features = json.loads(features)
+        except json.JSONDecodeError:
+            features = {}
+    
     merged = {}
     
     # Extract only desired features from the features JSONB
