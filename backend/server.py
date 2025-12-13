@@ -264,56 +264,56 @@ def save_favourites(user_payload):
         return jsonify({"success": False, "message": "Ошибка сохранения в БД"}), 500
 
 
-# @app.route('/api/add-my-plant', methods=['POST'])
-# @auth_required
-# def add_my_plant(user_payload):
-#     user_id = user_payload.get("user_id")
+@app.route('/api/add-my-plant', methods=['POST'])
+@auth_required
+def add_my_plant(user_payload):
+    user_id = user_payload.get("user_id")
 
-#     data = request.get_json()
-#     if not data or "plant_id" not in data:
-#         return jsonify({"success": False, "message": "Ожидался plant_id"}), 400
+    data = request.get_json()
+    if not data or "plant_id" not in data:
+        return jsonify({"success": False, "message": "Ожидался plant_id"}), 400
 
-#     plant_id = data["plant_id"]
+    plant_id = data["plant_id"]
 
-#     try:
-#         conn = get_db_connection()
-#         cursor = conn.cursor()
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
 
-#         # Проверка на существующую запись
-#         cursor.execute("""
-#             SELECT favorite, my_plant FROM user_plants
-#             WHERE user_id = %s AND plant_id = %s
-#         """, (user_id, plant_id))
+        # Проверка на существующую запись
+        cursor.execute("""
+            SELECT favorite, my_plant FROM user_plants
+            WHERE user_id = %s AND plant_id = %s
+        """, (user_id, plant_id))
 
-#         existing_record = cursor.fetchone()
+        existing_record = cursor.fetchone()
 
-#         if existing_record:
-#             # Если запись существует, обновляем my_plant на true
-#             cursor.execute("""
-#                 UPDATE user_plants
-#                 SET 
-#                   my_plant = TRUE,
-#                   favourite = FALSE
-#                 WHERE user_id = %s AND plant_id = %s
-#             """, (user_id, plant_id))
-#             message = "Растение добавлено в мои растения"
-#         else:
-#             # Если записи нет, создаем новую с my_plant = true
-#             cursor.execute("""
-#                 INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
-#                 VALUES (%s, %s, FALSE, TRUE, 0.0, NULL)
-#             """, (user_id, plant_id))
-#             message = "Растение добавлено в мои растения"
+        if existing_record:
+            # Если запись существует, обновляем my_plant на true
+            cursor.execute("""
+                UPDATE user_plants
+                SET 
+                  my_plant = TRUE,
+                  favorite = FALSE
+                WHERE user_id = %s AND plant_id = %s
+            """, (user_id, plant_id))
+            message = "Растение добавлено в мои растения"
+        else:
+            # Если записи нет, создаем новую с my_plant = true
+            cursor.execute("""
+                INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
+                VALUES (%s, %s, FALSE, TRUE, 0.0, NULL)
+            """, (user_id, plant_id))
+            message = "Растение добавлено в мои растения"
 
-#         conn.commit()
-#         cursor.close()
-#         conn.close()
+        conn.commit()
+        cursor.close()
+        conn.close()
 
-#         return jsonify({"success": True, "message": message})
+        return jsonify({"success": True, "message": message})
 
-#     except Exception as e:
-#         print("Ошибка при добавлении растения:", e)
-#         return jsonify({"success": False, "message": "Ошибка сохранения в БД"}), 500
+    except Exception as e:
+        print("Ошибка при добавлении растения:", e)
+        return jsonify({"success": False, "message": "Ошибка сохранения в БД"}), 500
 
 
 # -----------------------------

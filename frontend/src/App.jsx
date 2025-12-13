@@ -348,7 +348,7 @@ const Header = ({ favoritesCount, myPlantsCount, onNavigate, userId, userName })
           <User className="w-5 h-5" />
           {userName && <span className="ml-1 text-emerald-700 font-semibold">{userName}</span>}
         </button>
-        <button
+        {/* <button
           onClick={() => {
             localStorage.removeItem('userProfile');
             setUserProfile({});
@@ -358,7 +358,7 @@ const Header = ({ favoritesCount, myPlantsCount, onNavigate, userId, userName })
           title="Начать сначала"
         >
           <RefreshCcw className="w-4 h-4" />
-        </button>
+        </button> */}
       </nav>
     </div>
   </header>
@@ -1376,9 +1376,33 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate }) => {
   const [selectedForComparison, setSelectedForComparison] = useState([]);
   const [detailedPlantId, setDetailedPlantId] = useState(null);
 
-  const handleAddToMyPlants = (plant) => {
+  const handleAddToMyPlants = async (plant) => {
     if (window.AppFunctions?.addToMyPlants) window.AppFunctions.addToMyPlants(plant);
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        alert('Необходимо авторизоваться');
+        return;
+      }
+
+      const response = await fetch('http://localhost:3001/api/add-my-plant', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ plant_id: plant.id })
+      });
+
+      const result = await response.json();
+      
+    } catch (error) {
+      console.error('Error adding plant to my plants:', error);
+      alert('Ошибка при добавлении растения');
+    }
   };
+  
   const handleRemoveFavorite = (id) => {
     setFavorites(prev => prev.filter(p => p.id !== id));
     setSelectedForComparison(prev => prev.filter(pId => pId !== id)); 
