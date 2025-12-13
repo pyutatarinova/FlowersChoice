@@ -68,43 +68,43 @@ class PlantSearchService:
         return results
 
 
-def find_similar_plants(text: str, top_k: int = 10) -> str:
-    """Convenience helper: compute embedding and return JSON string with top-K plants.
+# def find_similar_plants(text: str, top_k: int = 10) -> str:
+#     """Convenience helper: compute embedding and return JSON string with top-K plants.
 
-    Returns a single JSON object with key `plants` containing a list of up to
-    `top_k` plant objects. Fields from the `features` JSONB column are promoted
-    to the top level for each plant (so there is no nested `features`). Each
-    plant object includes `id`, `name`, promoted feature fields and
-    `cosine_similarity`.
-    """
-    service = PlantSearchService()
-    results = service.find_similar_plants(text, top_k=top_k)
+#     Returns a single JSON object with key `plants` containing a list of up to
+#     `top_k` plant objects. Fields from the `features` JSONB column are promoted
+#     to the top level for each plant (so there is no nested `features`). Each
+#     plant object includes `id`, `name`, promoted feature fields and
+#     `cosine_similarity`.
+#     """
+#     service = PlantSearchService()
+#     results = service.find_similar_plants(text, top_k=top_k)
 
-    flattened: List[Dict[str, Any]] = []
-    # desired_features = ['light_requirements', 'watering_frequency', 'humidity_preference', 'toxicity']
-    for r in results:
-        features = r.get('features') or {}
-        merged: Dict[str, Any] = {}
-        # for key in desired_features:
-        #     if key in features:
-        #         merged[key] = features[key]
-        if isinstance(features, dict):
-            merged.update(features)
-        # Ensure primary fields override any feature keys
-        merged['id'] = r.get('id')
-        merged['name'] = r.get('name')
-        merged['cosine_similarity'] = r.get('cosine_similarity')
-        flattened.append(merged)
+#     flattened: List[Dict[str, Any]] = []
+#     # desired_features = ['light_requirements', 'watering_frequency', 'humidity_preference', 'toxicity']
+#     for r in results:
+#         features = r.get('features') or {}
+#         merged: Dict[str, Any] = {}
+#         # for key in desired_features:
+#         #     if key in features:
+#         #         merged[key] = features[key]
+#         if isinstance(features, dict):
+#             merged.update(features)
+#         # Ensure primary fields override any feature keys
+#         merged['id'] = r.get('id')
+#         merged['name'] = r.get('name')
+#         merged['cosine_similarity'] = r.get('cosine_similarity')
+#         flattened.append(merged)
 
-    return json.dumps({'plants': flattened}, ensure_ascii=False)
+#     return json.dumps({'plants': flattened}, ensure_ascii=False)
 
 
-if __name__ == "__main__":
-    import sys
+# if __name__ == "__main__":
+#     import sys
 
-    prompt = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "small fragrant pink shrub, ovate leaves"
-    print("Generating top-10 similar plants for prompt:\n", prompt)
-    matches = find_similar_plants(prompt, top_k=10)
-    print("Results (id, distance):")
-    print(matches)
+#     prompt = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else "small fragrant pink shrub, ovate leaves"
+#     print("Generating top-10 similar plants for prompt:\n", prompt)
+#     matches = find_similar_plants(prompt, top_k=10)
+#     print("Results (id, distance):")
+#     print(matches)
 

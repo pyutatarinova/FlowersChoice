@@ -175,8 +175,8 @@ const QUESTIONS = {
       prompt: 'Где будет стоять растение?',
       placeholder: 'Например: "Рядом с южным окном" или "В глубине северной комнаты".',
       options: [
-        { label: 'На ярком окне (юг/запад)', value: 'bright_window', icon: Sun },
-        { label: 'В светлой комнате (восток/север)', value: 'light_room', icon: Feather },
+        { label: 'На ярком окне (юг/запад)', value: 'bright window', icon: Sun },
+        { label: 'В светлой комнате (восток/север)', value: 'light room', icon: Feather },
         { label: 'В тени или глубине комнаты', value: 'shade', icon: Leaf },
         { label: 'На балконе (сезонно)', value: 'balcony', icon: Heart },
         { label: 'В ванной (влажно)', value: 'bathroom', icon: Droplets }, 
@@ -187,10 +187,10 @@ const QUESTIONS = {
       prompt: 'Какой уход ты готов(а) предоставить?',
       placeholder: 'Например: "Готов поливать раз в 3 дня" или "Только неприхотливое".',
       options: [
-        { label: 'Уход 2-3 раза в неделю', value: 'high_care', icon: Heart },
-        { label: 'Умеренный уход (раз в неделю)', value: 'medium_care', icon: Droplets },
-        { label: 'Неприхотливое (редкий полив)', value: 'low_care', icon: Zap },
-        { label: 'Часто опрыскивать/высокая влажность', value: 'high_humidity', icon: Droplets },
+        { label: 'Уход 2-3 раза в неделю', value: 'high care', icon: Heart },
+        { label: 'Умеренный уход (раз в неделю)', value: 'medium care', icon: Droplets },
+        { label: 'Неприхотливое (редкий полив)', value: 'low care', icon: Zap },
+        { label: 'Часто опрыскивать/высокая влажность', value: 'high humidity', icon: Droplets },
       ],
     },
     {
@@ -198,7 +198,7 @@ const QUESTIONS = {
       prompt: 'Какую роль должно выполнять растение?',
       placeholder: 'Например: "Хочу, чтобы оно очищало воздух" или "Только для декора".',
       options: [
-        { label: 'Очищало воздух (польза)', value: 'air_purifying', icon: Leaf },
+        { label: 'Очищало воздух (польза)', value: 'air purifying', icon: Leaf },
         { label: 'Украшало интерьер (эстетика)', value: 'decorative', icon: Heart },
         { label: 'Просто зелень и умиротворение', value: 'greenery', icon: Feather }, 
         { label: 'Фон для фото', value: 'photo_background', icon: Gift },
@@ -209,10 +209,10 @@ const QUESTIONS = {
       prompt: 'Предпочтения к размеру и форме?',
       placeholder: 'Например: "Нужно высокое напольное растение" или "Маленькое для стола".',
       options: [
-        { label: 'Большое, напольное', value: 'large_floor', icon: Zap },
+        { label: 'Большое, напольное', value: 'large floor', icon: Zap },
         { label: 'Подвесное, ампельное', value: 'hanging', icon: Droplets },
-        { label: 'Маленькое, настольное', value: 'table_top', icon: Feather },
-        { label: 'Разные размеры, главное, чтобы вписалось', value: 'any_size', icon: Heart },
+        { label: 'Маленькое, настольное', value: 'table top', icon: Feather },
+        { label: 'Разные размеры, главное, чтобы вписалось', value: 'any size', icon: Heart },
       ],
     },
     {
@@ -220,11 +220,11 @@ const QUESTIONS = {
       prompt: 'Ещё какие-то важные примечания?',
       placeholder: 'Например: "Хочу с красными листьями" или "Главное, чтобы не было запаха".',
       options: [
-        { label: 'Безопасно для животных', value: 'safe_for_pets' },
+        { label: 'Безопасно для животных', value: 'safe for pets' },
         { label: 'Цветущее', value: 'flowering' },
-        { label: 'С яркими листьями', value: 'colorful_leaves' },
-        { label: 'Теневыносливое', value: 'shade_tolerant' },
-        { label: 'Крупногабаритное', value: 'large_volume' },
+        { label: 'С яркими листьями', value: 'colorful leaves' },
+        { label: 'Теневыносливое', value: 'shade tolerant' },
+        { label: 'Крупногабаритное', value: 'large volume' },
       ]
     }
   ],
@@ -650,9 +650,7 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
 const ComparisonCard = ({ plant, isLeft, onSelect }) => (
   <div
     onClick={() => onSelect(plant)}
-    className={`bg-white rounded-2xl shadow-xl p-6 border-4 cursor-pointer transition-all duration-300 hover:scale-[1.02] text-center
-      ${isLeft ? 'border-lime-300 hover:border-lime-500' : 'border-red-300 hover:border-red-500'}
-    `}
+    className={`bg-white rounded-2xl shadow-xl p-6 border-4 cursor-pointer transition-all duration-300 hover:scale-[1.02] text-center border-lime-300 hover:border-lime-500`}
   >
     <img
       src={plant.photo}
@@ -674,9 +672,7 @@ const ComparisonCard = ({ plant, isLeft, onSelect }) => (
     </p>
 
     <button
-      className={`w-full mt-6 py-3 font-bold rounded-xl text-white shadow-lg 
-        ${isLeft ? 'bg-lime-500 hover:bg-lime-600' : 'bg-red-500 hover:bg-red-600'}
-      `}
+      className={`w-full mt-6 py-3 font-bold rounded-xl text-white shadow-lg bg-lime-500 hover:bg-lime-600`}
     >
       Выбрать!
     </button>
@@ -1084,7 +1080,7 @@ const App = () => {
     setAppState('loading');
 
     try {
-      const response = await fetch("http://localhost:3001/api/generatePlants", {
+      const response = await fetch("http://localhost:3001/api/search-plants", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(answers)

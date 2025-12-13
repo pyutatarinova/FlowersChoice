@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
     name VARCHAR(255),
     email VARCHAR(255) UNIQUE,
     password VARCHAR(255),
-    tocken VARCHAR(255),
+    token VARCHAR(255),
     created_at DATE,
     updated_at DATE,
     features JSONB,
@@ -579,4 +579,3 @@ INSERT INTO plants (id, name, features) VALUES (
     'Lemon Balm',
     '{"photo": null, "origin": "Temperate regions (Europe, Asia)", "light_requirements": "Bright Indirect Light to Morning Sun", "watering_frequency": "Keep soil evenly moist; do not allow to fully dry", "soil_type": "Rich, well-draining herb mix", "humidity_preference": "Moderate (40-60%)", "fertilizer_needs": "Low to Moderate (light feeding monthly)", "min_temp": 5, "max_temp": 28, "comfort_temp": "15-22°C", "misting": false, "growth_rate": "Fast", "mature_size": "Bushy herb 20-40 cm tall", "toxicity": "Non-toxic and edible for humans; generally safe for pets", "maintenance_level": "Beginner", "flowering": true, "fragrance": true, "repotting_frequency": "Every 1-2 years", "common_pests": "Aphids, spider mites, whiteflies", "common_diseases": "Powdery mildew, root rot", "common_issues": "Wilting: underwatering; Yellowing: overwatering", "legend_of_plant": "Fresh tea and salad herbs associated with calm and wellness", "brief_description": "Aromatic kitchen herb grown indoors for fresh leaves and pleasant scent.", "health_benefits": "Medicinal / herbal use; Mood-boosting / stress-reducing; Primary decorative"}'
 );
-
