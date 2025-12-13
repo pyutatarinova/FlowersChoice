@@ -317,7 +317,7 @@ def add_my_plant(user_payload):
         return jsonify({"success": False, "message": "Ошибка сохранения в БД"}), 500
     
 
-@app.route('/api/userfavoriteplants', methods=['GET'])
+@app.route('/api/userplants', methods=['GET'])
 @auth_required
 def user_my_plants(user_payload):
     user_id = user_payload.get("user_id")
@@ -326,56 +326,51 @@ def user_my_plants(user_payload):
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # 1. Получаем plant_id всех избранных растений пользователя
-        cursor.execute("""
-            SELECT plant_id
-            FROM user_plants
-            WHERE user_id = %s AND favorite = TRUE
-        """, (user_id,))
+        def get_plants_by_flag(flag_column: str):
+            """
+            Универсальная функция:
+            получает растения пользователя по флагу favorite / my_plant
+            """
+            cursor.execute(f"""
+                SELECT p.id, p.name, p.features
+                FROM user_plants up
+                JOIN plants p ON p.id = up.plant_id
+                WHERE up.user_id = %s AND up.{flag_column} = TRUE
+            """, (user_id,))
 
-        rows = cursor.fetchall()
+            rows = cursor.fetchall()
 
-        if not rows:
-            return jsonify({
-                "success": True,
-                "plants": []
-            })
+            results = []
+            for r in rows:
+                plant = {
+                    "id": int(r[0]),
+                    "name": r[1],
+                    "features": r[2],
+                }
+                results.append(_format_plant_response(plant))
 
-        plant_ids = [row[0] for row in rows]
+            return results
 
-        # 2. Получаем данные растений из таблицы plants
-        cursor.execute("""
-            SELECT id, name, features
-            FROM plants
-            WHERE id = ANY(%s)
-        """, (plant_ids,))
-
-        plants_rows = cursor.fetchall()
+        favorite_plants = get_plants_by_flag("favorite")
+        my_plants = get_plants_by_flag("my_plant")
 
         cursor.close()
         conn.close()
-        
-        results: List[Dict[str, Any]] = []
-        for r in plants_rows:
-            results.append({
-                'id': int(r[0]),
-                'name': r[1],
-                'features': r[2],
-            })
+        # print(my_plants)
 
-        # 3. Формируем ответ
-        formatted_results = []
-        for plant in results:
-            formatted_plant = _format_plant_response(plant)
-            formatted_results.append(formatted_plant)
-        return jsonify(formatted_results)
+        return jsonify({
+            "success": True,
+            "favorite": favorite_plants,
+            "my_plant": my_plants
+        })
 
     except Exception as e:
         print("Ошибка в /api/userfavoriteplants:", e)
         return jsonify({
             "success": False,
-            "message": "Ошибка получения избранных растений"
+            "message": "Ошибка получения растений пользователя"
         }), 500
+
 
 
 # -----------------------------

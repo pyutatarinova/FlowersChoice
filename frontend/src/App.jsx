@@ -1186,7 +1186,7 @@ const App = () => {
               console.error('Ошибка сохранения профиля:', e);
               return;
             }
-            localStorage.setItem('userToken', token);
+            localStorage.setItem('authToken', token);
             // Получаем профиль пользователя через /api/userinfo
             try {
               const res = await fetch('http://localhost:3001/api/userinfo', {
@@ -1199,12 +1199,33 @@ const App = () => {
               }
               
               // Загружаем избранные растения пользователя (для нового пользователя пустой список)
-              const favRes = await fetch('http://localhost:3001/api/userfavoriteplants', {
+              const favRes = await fetch('http://localhost:3001/api/userplants', {
                 headers: { 'Authorization': `Bearer ${token}` }
               });
               const favData = await favRes.json();
-              if (favData && Array.isArray(favData)) {
-                setFavorites(favData);
+              if (favData.success) {
+                setFavorites(favData.favorite);
+                // Преобразуем my_plant в формат для myPlants
+                const transformedMyPlants = favData.my_plant.map(plant => ({
+                  id: plant.id,
+                  originalId: plant.id,
+                  name: plant.plant_name,
+                  latin: plant.plant_name,
+                  image: plant.photo,
+                  details: plant.brief_description,
+                  traits: {
+                    light: plant.light_requirements,
+                    water: plant.watering_frequency,
+                    temp: plant.comfort_temp,
+                    size: plant.mature_size
+                  },
+                  notes: '',
+                  rating: 5,
+                  wateringSchedule: 7,
+                  wateringHistory: [new Date()],
+                  addedAt: new Date()
+                }));
+                setMyPlants(transformedMyPlants);
               }
             } catch (e) {
               console.error('Ошибка получения профиля или избранных:', e);
@@ -1238,12 +1259,33 @@ const App = () => {
               }
               
               // Загружаем избранные растения пользователя
-              const favRes = await fetch('http://localhost:3001/api/userfavoriteplants', {
+              const favRes = await fetch('http://localhost:3001/api/userplants', {
                 headers: { 'Authorization': `Bearer ${token}` }
               });
               const favData = await favRes.json();
-              if (favData && Array.isArray(favData)) {
-                setFavorites(favData);
+              if (favData.success) {
+                setFavorites(favData.favorite);
+                // Преобразуем my_plant в формат для myPlants
+                const transformedMyPlants = favData.my_plant.map(plant => ({
+                  id: plant.id,
+                  originalId: plant.id,
+                  name: plant.plant_name,
+                  latin: plant.plant_name,
+                  image: plant.photo,
+                  details: plant.brief_description,
+                  traits: {
+                    light: plant.light_requirements,
+                    water: plant.watering_frequency,
+                    temp: plant.comfort_temp,
+                    size: plant.mature_size
+                  },
+                  notes: '',
+                  rating: 5,
+                  wateringSchedule: 7,
+                  wateringHistory: [new Date()],
+                  addedAt: new Date()
+                }));
+                setMyPlants(transformedMyPlants);
               }
             } catch (e) {
               console.error('Ошибка получения профиля или избранных:', e);
