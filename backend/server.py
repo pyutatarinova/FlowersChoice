@@ -22,6 +22,22 @@ from plant_repository import PlantRepository
 
 app = Flask(__name__)
 CORS(app)
+# Конфигурация Swagger с API Key
+app.config['SWAGGER'] = {
+    'title': 'FlowersChoice API',
+    'uiversion': 3,
+    'securityDefinitions': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Введите: Bearer <ваш_токен>'
+        }
+    },
+    'security': [
+        {'Bearer': []}
+    ]
+}
 swagger = Swagger(app)
 
 PORT = 3001

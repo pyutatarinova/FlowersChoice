@@ -9,7 +9,7 @@ pip install -r requirements.txt
 
 Или если уже установили все, просто обновите flasgger:
 ```bash
-pip install flasgger==0.9.8
+pip install flasgger==0.9.7
 ```
 
 ### 2. Запуск сервера
