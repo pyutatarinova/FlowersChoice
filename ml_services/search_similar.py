@@ -53,18 +53,19 @@ class PlantSearchService:
         emb = model.encode([text], normalize_embeddings=True, show_progress_bar=False)
         return list(np.asarray(emb[0], dtype=float))
 
-    def find_similar_plants(self, text: str, top_k: int = 10) -> List[Dict[str, Any]]:
+    def find_similar_plants(self, text: str, user_id: int, top_k: int = 10) -> List[Dict[str, Any]]:
         """Return top-k plants (as dicts) for the given text prompt.
 
         - `text` is encoded using the SentenceTransformer model.
         - Repository returns full plant fields plus `cosine_similarity`.
+        - Excludes plants already in user's favorites or my_plants.
         """
         if not isinstance(text, str) or not text.strip():
             return []
         print('Starting embedding computation...')
         embedding = self._embed_text(text.strip())
         print('Embedding computed, querying repository...')
-        results = self.repo.top_k_by_embedding(embedding, k=top_k)
+        results = self.repo.top_k_by_embedding(embedding, user_id=user_id, k=top_k)
         return results
 
 

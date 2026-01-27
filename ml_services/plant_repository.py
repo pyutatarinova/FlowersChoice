@@ -50,9 +50,11 @@ class PlantRepository:
     def _get_connection(self):
         return psycopg2.connect(self._dsn)
 
-    def top_k_by_embedding(self, embedding: List[float], k: int = 10) -> List[Dict[str, Any]]:
+    def top_k_by_embedding(self, embedding: List[float], user_id: int, k: int = 10) -> List[Dict[str, Any]]:
         """Return top-k plants with their fields and cosine similarity.
 
+        Excludes plants that are already in user's favorites or my_plants.
+        
         Returns a list of dicts with keys: `id`, `name`, `features` and
         `cosine_similarity` (higher == more similar). The `features` field is
         returned as a Python object (decoded from JSONB).
@@ -65,12 +67,15 @@ class PlantRepository:
 
         # Compose SQL with Literal to avoid param-formatting issues when
         # embedding literal contains characters that confused param substitution.
-        # features добавить
+        # Exclude plants that are in user's favorites or my_plants
+        print (user_id)
         query = sql.SQL(
-            "SELECT id, name, features, 1 - (embedding <=> {vec}::vector) AS cosine_similarity "
-            "FROM public.plants WHERE embedding IS NOT NULL "
+            "SELECT p.id, p.name, p.features, 1 - (p.embedding <=> {vec}::vector) AS cosine_similarity "
+            "FROM public.plants p "
+            "WHERE p.embedding IS NOT NULL "
+            "AND NOT EXISTS (SELECT 1 FROM user_plants up WHERE up.plant_id = p.id AND up.user_id = {user_id} AND (up.favorite = TRUE OR up.my_plant = TRUE)) "
             "ORDER BY cosine_similarity DESC LIMIT {limit};"
-        ).format(vec=sql.Literal(arr_literal), limit=sql.Literal(k))
+        ).format(vec=sql.Literal(arr_literal), user_id=sql.Literal(user_id), limit=sql.Literal(k))
 
         with self._get_connection() as conn:
             with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:

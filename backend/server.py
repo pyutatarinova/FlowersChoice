@@ -4,7 +4,7 @@ from flasgger import Swagger
 import json
 import os
 import base64
-import psycopg2
+# import psycopg2
 import random
 from datetime import date, datetime, timedelta, timezone
 from dotenv import load_dotenv
@@ -57,14 +57,14 @@ def generate_vector_embedding(dim=768):
     return [random.uniform(-1.0, 1.0) for _ in range(dim)]
 
 
-def get_db_connection():
-    return psycopg2.connect(
-        dbname=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASS"),
-        host="127.0.0.1",
-        port=5001
-    )
+# def get_db_connection():
+#     return psycopg2.connect(
+#         dbname=os.getenv("DB_NAME"),
+#         user=os.getenv("DB_USER"),
+#         password=os.getenv("DB_PASS"),
+#         host="127.0.0.1",
+#         port=5001
+#     )
 
 
 def create_token(user_id, email):
@@ -99,6 +99,33 @@ def auth_required(f):
             return jsonify({"success": False, "message": "Ошибка токена"}), 401
 
         return f(payload, *args, **kwargs)
+
+    return wrapper
+
+
+def auth_optional(f):
+    """Decorator that extracts user_id if token is present, otherwise uses a system user_id."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        auth_header = request.headers.get("Authorization")
+        user_payload = {"user_id": -1}  # Default system user_id
+        
+        if auth_header and auth_header.startswith("Bearer "):
+            token = auth_header.split(" ")[1]
+            try:
+                user_payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGO])
+                # print(f"Token decoded successfully, user_id: {user_payload.get('user_id')}")
+            except jwt.ExpiredSignatureError:
+                print("Token expired, using system user_id")
+                user_payload = {"user_id": -1}
+            except jwt.InvalidTokenError as e:
+                print(f"Invalid token: {e}, using system user_id")
+                user_payload = {"user_id": -1}
+            except Exception as e:
+                print(f"Unexpected error during token decode: {e}, using system user_id")
+                user_payload = {"user_id": -1}
+        
+        return f(user_payload, *args, **kwargs)
 
     return wrapper
 
@@ -653,7 +680,8 @@ def _format_plant_response(plant_data: dict) -> dict:
 
 
 @app.route('/api/search-plants', methods=['POST'])
-def search_plants():
+@auth_optional
+def search_plants(user_payload):
     """
     Search for plants based on user criteria
     ---
@@ -764,8 +792,9 @@ def search_plants():
             return jsonify({"success": False, "message": "Пожалуйста, укажите критерии поиска"}), 400
         
         # Search for similar plants
+        user_id = user_payload.get('user_id')
         service = PlantSearchService()
-        results = service.find_similar_plants(prompt, top_k=10)
+        results = service.find_similar_plants(prompt, user_id=user_id, top_k=10)
         
         # Format results for frontend
         formatted_results = []
