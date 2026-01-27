@@ -56,17 +56,6 @@ JWT_EXPIRE_MIN = 60
 def generate_vector_embedding(dim=768):
     return [random.uniform(-1.0, 1.0) for _ in range(dim)]
 
-
-# def get_db_connection():
-#     return psycopg2.connect(
-#         dbname=os.getenv("DB_NAME"),
-#         user=os.getenv("DB_USER"),
-#         password=os.getenv("DB_PASS"),
-#         host="127.0.0.1",
-#         port=5001
-#     )
-
-
 def create_token(user_id, email):
     payload = {
         "user_id": user_id,
@@ -679,6 +668,15 @@ def _format_plant_response(plant_data: dict) -> dict:
     return merged
 
 
+def _format_plant_response_with_rating(plant_data: dict) -> dict:
+    """Format plant data for frontend response including rating information."""
+    result = _format_plant_response(plant_data)
+    result['avg_score'] = plant_data.get('avg_score', 0.0)
+    result['rating_count'] = plant_data.get('rating_count', 0)
+    result['rating_position'] = plant_data.get('rating_position', 0)
+    return result
+
+
 @app.route('/api/search-plants', methods=['POST'])
 @auth_optional
 def search_plants(user_payload):
@@ -888,6 +886,197 @@ def remove_plant(user_payload):
     except Exception as e:
         print(f"Ошибка при удалении растения: {e}")
         return jsonify({"success": False, "message": "Ошибка удаления из БД"}), 500
+
+
+@app.route('/api/update-plant-score', methods=['POST'])
+@auth_required
+def update_plant_score(user_payload):
+    """
+    Update score for a plant in user's collection
+    ---
+    tags:
+      - Plants
+    security:
+      - Bearer: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - plant_id
+            - score
+          properties:
+            plant_id:
+              type: integer
+              example: 1
+            score:
+              type: number
+              example: 4
+              description: "Score value (0-5 or any numeric value)"
+    responses:
+      200:
+        description: Score updated successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            message:
+              type: string
+      400:
+        description: Missing required fields or invalid values
+      401:
+        description: Unauthorized
+      404:
+        description: Plant not found in user's collection
+      500:
+        description: Database error
+    """
+    user_id = user_payload.get("user_id")
+    
+    data = request.get_json()
+    if not data or "plant_id" not in data or "score" not in data:
+        return jsonify({"success": False, "message": "Требуются plant_id и score"}), 400
+    
+    plant_id = data["plant_id"]
+    
+    # Validate score is numeric
+    try:
+        score = float(data["score"])
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "score должен быть числовым значением"}), 400
+    
+    try:
+        repo = PlantRepository()
+        repo.update_plant_score(user_id, plant_id, score)
+        
+        return jsonify({"success": True, "message": "Оценка обновлена"})
+    
+    except Exception as e:
+        print(f"Ошибка при обновлении оценки растения: {e}")
+        if "not found" in str(e):
+            return jsonify({"success": False, "message": "Растение не найдено в коллекции пользователя"}), 404
+        return jsonify({"success": False, "message": "Ошибка обновления оценки"}), 500
+
+
+@app.route('/api/plants-rating', methods=['GET'])
+def plants_rating():
+    """
+    Get plants rating sorted by average user scores with pagination
+    ---
+    tags:
+      - Plants
+    parameters:
+      - name: page
+        in: query
+        type: integer
+        default: 1
+        description: "Page number (1-based)"
+      - name: per_page
+        in: query
+        type: integer
+        default: 20
+        description: "Items per page (1-100)"
+    responses:
+      200:
+        description: Plants rating retrieved
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            total_count:
+              type: integer
+              description: "Total number of plants"
+            page:
+              type: integer
+            per_page:
+              type: integer
+            total_pages:
+              type: integer
+            plants:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  plant_name:
+                    type: string
+                  avg_score:
+                    type: number
+                    description: "Average score from all user ratings"
+                  rating_count:
+                    type: integer
+                    description: "Number of ratings"
+                  rating_position:
+                    type: integer
+                    description: "Position in rating (1-based)"
+                  light_requirements:
+                    type: string
+                  watering_frequency:
+                    type: string
+                  comfort_temp:
+                    type: string
+                  mature_size:
+                    type: string
+                  brief_description:
+                    type: string
+                  photo:
+                    type: string
+      400:
+        description: Invalid pagination parameters
+      500:
+        description: Server error
+    """
+    try:
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        # Validate pagination parameters
+        if page < 1:
+            page = 1
+        if per_page < 1 or per_page > 100:
+            per_page = 20
+        
+        repo = PlantRepository()
+        all_plants = repo.get_plants_rating()
+        
+        total_count = len(all_plants)
+        total_pages = (total_count + per_page - 1) // per_page
+        
+        # Calculate pagination bounds
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        
+        # Check if page is valid
+        if page > total_pages and total_count > 0:
+            return jsonify({
+                "success": False,
+                "message": f"Страница {page} не существует. Всего страниц: {total_pages}"
+            }), 400
+        
+        # Get paginated plants
+        paginated_plants = all_plants[start_idx:end_idx]
+        
+        # Format results
+        formatted_plants = [_format_plant_response_with_rating(p) for p in paginated_plants]
+        
+        return jsonify({
+            "success": True,
+            "total_count": total_count,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "plants": formatted_plants
+        })
+    
+    except Exception as e:
+        print(f"Ошибка при получении рейтинга растений: {e}")
+        return jsonify({"success": False, "message": "Ошибка получения рейтинга"}), 500
 
 
 # -----------------------------

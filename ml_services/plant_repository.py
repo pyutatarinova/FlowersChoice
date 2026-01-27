@@ -265,6 +265,8 @@ class PlantRepository:
     def remove_user_plant_flag(self, user_id: int, plant_id: int, flag: str) -> str:
         """Remove plant from user's collection by setting flag to FALSE.
         
+        If both favorite and my_plant are FALSE and score is 0, delete the record entirely.
+        
         Args:
             user_id: User ID
             plant_id: Plant ID
@@ -284,11 +286,12 @@ class PlantRepository:
             with conn.cursor() as cur:
                 # Check if record exists
                 cur.execute("""
-                    SELECT 1 FROM user_plants
+                    SELECT favorite, my_plant, score FROM user_plants
                     WHERE user_id = %s AND plant_id = %s
                 """, (user_id, plant_id))
                 
-                if not cur.fetchone():
+                record = cur.fetchone()
+                if not record:
                     raise Exception(f"Plant record not found for user_id={user_id}, plant_id={plant_id}")
                 
                 # Set flag to FALSE
@@ -298,8 +301,95 @@ class PlantRepository:
                     WHERE user_id = %s AND plant_id = %s
                 """, (user_id, plant_id))
                 
-                conn.commit()
+                # Check if record is now "empty" (both flags False and score 0)
+                cur.execute("""
+                    SELECT favorite, my_plant, score FROM user_plants
+                    WHERE user_id = %s AND plant_id = %s
+                """, (user_id, plant_id))
                 
-                flag_name = "избранное" if flag == "favorite" else "мои растения"
-                return f"Растение удалено из {flag_name}"
+                updated_record = cur.fetchone()
+                favorite, my_plant, score = updated_record
+                
+                # Delete if both flags are False and score is 0
+                if not favorite and not my_plant and (score is None or score == 0.0):
+                    cur.execute("""
+                        DELETE FROM user_plants
+                        WHERE user_id = %s AND plant_id = %s
+                    """, (user_id, plant_id))
+                    message = "Растение полностью удалено из коллекции"
+                else:
+                    message = "Растение удалено из " + ("избранного" if flag == "favorite" else "моих растений")
+                
+                conn.commit()
+                return message
 
+    def update_plant_score(self, user_id: int, plant_id: int, score: float) -> None:
+        """Update score for a plant in user_plants table.
+        
+        Args:
+            user_id: User ID
+            plant_id: Plant ID
+            score: Score value to set
+        
+        Raises:
+            Exception: If plant record doesn't exist for user
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                # Check if record exists
+                cur.execute("""
+                    SELECT 1 FROM user_plants
+                    WHERE user_id = %s AND plant_id = %s
+                """, (user_id, plant_id))
+                
+                if not cur.fetchone():
+                    raise Exception(f"Plant record not found for user_id={user_id}, plant_id={plant_id}")
+                
+                # Update score
+                cur.execute("""
+                    UPDATE user_plants
+                    SET score = %s
+                    WHERE user_id = %s AND plant_id = %s
+                """, (float(score), user_id, plant_id))
+                
+                conn.commit()
+
+    def get_plants_rating(self) -> List[Dict[str, Any]]:
+        """Get aggregated plant ratings sorted by average score (highest first).
+        
+        Calculates average score for each plant from all user ratings,
+        orders by score descending, and returns with ranking position.
+        
+        Returns:
+            List of dicts with keys: `id`, `name`, `features`, `avg_score`, `rating_position`
+        """
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+                cur.execute("""
+                    SELECT 
+                        p.id,
+                        p.name,
+                        p.features,
+                        AVG(up.score) as avg_score,
+                        COUNT(up.user_id) as rating_count
+                    FROM plants p
+                    LEFT JOIN user_plants up ON p.id = up.plant_id
+                    GROUP BY p.id, p.name, p.features
+                    ORDER BY avg_score DESC NULLS LAST, p.id ASC
+                """)
+                
+                rows = cur.fetchall()
+        
+        # Convert to list of dicts with ranking position
+        results: List[Dict[str, Any]] = []
+        for index, r in enumerate(rows, start=1):
+            results.append({
+                'id': int(r['id']),
+                'name': r.get('name'),
+                'features': r.get('features'),
+                'avg_score': float(r.get('avg_score')) if r.get('avg_score') is not None else 0.0,
+                'rating_count': int(r.get('rating_count')) if r.get('rating_count') is not None else 0,
+                'rating_position': index,
+            })
+        
+        return results
