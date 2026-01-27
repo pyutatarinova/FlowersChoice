@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from flasgger import Swagger
 import json
 import os
 import base64
@@ -13,11 +14,15 @@ import sys
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
 
+
 # Add ml_services to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "ml_services"))
 
+from plant_repository import PlantRepository
+
 app = Flask(__name__)
 CORS(app)
+swagger = Swagger(app)
 
 PORT = 3001
 load_dotenv(dotenv_path=Path(__file__).parent / '.env')
@@ -86,6 +91,58 @@ def auth_required(f):
 # -----------------------------
 @app.route('/api/register', methods=['POST'])
 def register():
+    """
+    Register a new user
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - name
+            - email
+            - password
+          properties:
+            name:
+              type: string
+              example: "John Doe"
+            email:
+              type: string
+              example: "john@example.com"
+            password:
+              type: string
+              example: "password123"
+            has_pets:
+              type: boolean
+              example: false
+            has_allergies:
+              type: boolean
+              example: false
+            preferences:
+              type: string
+              example: "low maintenance plants"
+    responses:
+      200:
+        description: Registration successful
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            token:
+              type: string
+              description: JWT token for authentication
+            message:
+              type: string
+      400:
+        description: Missing required fields
+      500:
+        description: Database error
+    """
     profile = request.get_json()
     if not profile or not all(k in profile for k in ["name", "email", "password"]):
         return jsonify({"success": False, "message": "Некорректные данные"}), 400
@@ -102,30 +159,20 @@ def register():
     embedding = generate_vector_embedding()
 
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        repo = PlantRepository()
+        user_id = repo.register_user(
+            name=profile['name'],
+            email=profile['email'],
+            encoded_password=encoded_password,
+            features=features,
+            embedding=embedding,
+            created_at=date.today(),
+            updated_at=date.today()
+        )
 
-        cursor.execute("""
-            INSERT INTO users (name, email, password, created_at, updated_at, features, embedding)
-            VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
-        """, (
-            profile['name'],
-            profile['email'],
-            encoded_password,
-            date.today(),
-            date.today(),
-            json.dumps(features),
-            embedding
-        ))
-
-        user_id = cursor.fetchone()[0]
         token = create_token(user_id, profile['email'])
 
-        cursor.execute("UPDATE users SET token = %s WHERE id = %s", (token, user_id))
-
-        conn.commit()
-        cursor.close()
-        conn.close()
+        repo.update_user_token(user_id, token) # Update token in database
 
         return jsonify({"success": True, "token": token, "message": "Регистрация успешна"})
 
@@ -139,6 +186,49 @@ def register():
 # -----------------------------
 @app.route('/api/login', methods=['POST'])
 def login():
+    """
+    User login
+    ---
+    tags:
+      - Authentication
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - email
+            - password
+          properties:
+            email:
+              type: string
+              example: "john@example.com"
+            password:
+              type: string
+              example: "password123"
+    responses:
+      200:
+        description: Login successful
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            token:
+              type: string
+              description: JWT token for authentication
+            message:
+              type: string
+      400:
+        description: Missing required fields
+      401:
+        description: Invalid password
+      404:
+        description: User not found
+      500:
+        description: Server error
+    """
     data = request.get_json()
 
     if not data or "email" not in data or "password" not in data:
@@ -147,27 +237,19 @@ def login():
     encoded_password = base64.b64encode(data['password'].encode("utf-8")).decode("utf-8")
 
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        repo = PlantRepository()
+        user_data = repo.get_user_by_email(data['email'])
 
-        cursor.execute("SELECT id, password FROM users WHERE email = %s", (data['email'],))
-        row = cursor.fetchone()
-
-        if not row:
+        if not user_data:
             return jsonify({"success": False, "message": "Пользователь не найден"}), 404
 
-        user_id, stored_password = row
+        user_id, stored_password = user_data
 
         if stored_password != encoded_password:
             return jsonify({"success": False, "message": "Неверный пароль"}), 401
 
         new_token = create_token(user_id, data['email'])
-
-        cursor.execute("UPDATE users SET token = %s WHERE id = %s", (new_token, user_id))
-        conn.commit()
-
-        cursor.close()
-        conn.close()
+        repo.update_user_token(user_id, new_token)
 
         return jsonify({"success": True, "token": new_token, "message": "Успешный вход"})
 
@@ -182,36 +264,53 @@ def login():
 @app.route('/api/userinfo', methods=['GET'])
 @auth_required
 def userinfo(user_payload):
+    """
+    Get user information
+    ---
+    tags:
+      - User
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: User information retrieved
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            user:
+              type: object
+              properties:
+                user_id:
+                  type: integer
+                name:
+                  type: string
+                email:
+                  type: string
+                has_pets:
+                  type: boolean
+                has_allergies:
+                  type: boolean
+                preferences:
+                  type: string
+      401:
+        description: Unauthorized or invalid token
+      404:
+        description: User not found
+      500:
+        description: Server error
+    """
     user_id = user_payload.get("user_id")
     if not user_id:
         return jsonify({"success": False, "message": "Некорректный токен"}), 401
 
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
+        repo = PlantRepository()
+        user_info = repo.get_user_info(user_id)
 
-        cursor.execute("""
-            SELECT id, name, email, created_at, updated_at, features, embedding
-            FROM users
-            WHERE id = %s
-        """, (user_id,))
-
-        row = cursor.fetchone()
-        cursor.close()
-        conn.close()
-
-        if not row:
+        if not user_info:
             return jsonify({"success": False, "message": "Пользователь не найден"}), 404
-
-        user_info = {
-            "id": row[0],
-            "name": row[1],
-            "email": row[2],
-            "created_at": row[3],
-            "updated_at": row[4],
-            "features": row[5],
-            "embedding": row[6],
-        }
 
         return jsonify({"success": True, "user": user_info})
 
@@ -223,6 +322,44 @@ def userinfo(user_payload):
 @app.route('/api/savefavourites', methods=['POST'])
 @auth_required
 def save_favourites(user_payload):
+    """
+    Save plant to favorites
+    ---
+    tags:
+      - Plants
+    security:
+      - Bearer: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - plant_id
+          properties:
+            plant_id:
+              type: integer
+              example: 1
+    responses:
+      200:
+        description: Plant added to favorites
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            message:
+              type: string
+      400:
+        description: Missing plant_id
+      401:
+        description: Unauthorized
+      409:
+        description: Plant already saved
+      500:
+        description: Database error
+    """
     user_id = user_payload.get("user_id")
 
     data = request.get_json()
@@ -232,31 +369,13 @@ def save_favourites(user_payload):
     plant_id = data["plant_id"]
 
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Проверка на существующую запись, чтобы не было дублей
-        cursor.execute("""
-            SELECT 1 FROM user_plants
-            WHERE user_id = %s AND plant_id = %s
-        """, (user_id, plant_id))
-
-        exists = cursor.fetchone()
-
-        if exists:
+        repo = PlantRepository()
+        
+        # Check if plant already exists
+        if repo.check_user_plant_exists(user_id, plant_id):
             return jsonify({"success": False, "message": "Растение уже сохранено"}), 409
         
-        cursor.execute("""
-            INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
-            VALUES (%s, %s, TRUE, FALSE, 0.0, NULL)
-        """, (
-            user_id,
-            plant_id
-        ))
-
-        conn.commit()
-        cursor.close()
-        conn.close()
+        repo.add_user_plant_favorite(user_id, plant_id)
 
         return jsonify({"success": True, "message": "Растение добавлено в избранное"})
 
@@ -268,6 +387,42 @@ def save_favourites(user_payload):
 @app.route('/api/add-my-plant', methods=['POST'])
 @auth_required
 def add_my_plant(user_payload):
+    """
+    Add plant to user's collection
+    ---
+    tags:
+      - Plants
+    security:
+      - Bearer: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - plant_id
+          properties:
+            plant_id:
+              type: integer
+              example: 1
+    responses:
+      200:
+        description: Plant added to collection
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            message:
+              type: string
+      400:
+        description: Missing plant_id
+      401:
+        description: Unauthorized
+      500:
+        description: Database error
+    """
     user_id = user_payload.get("user_id")
 
     data = request.get_json()
@@ -277,38 +432,8 @@ def add_my_plant(user_payload):
     plant_id = data["plant_id"]
 
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        # Проверка на существующую запись
-        cursor.execute("""
-            SELECT favorite, my_plant FROM user_plants
-            WHERE user_id = %s AND plant_id = %s
-        """, (user_id, plant_id))
-
-        existing_record = cursor.fetchone()
-
-        if existing_record:
-            # Если запись существует, обновляем my_plant на true
-            cursor.execute("""
-                UPDATE user_plants
-                SET 
-                  my_plant = TRUE,
-                  favorite = FALSE
-                WHERE user_id = %s AND plant_id = %s
-            """, (user_id, plant_id))
-            message = "Растение добавлено в мои растения"
-        else:
-            # Если записи нет, создаем новую с my_plant = true
-            cursor.execute("""
-                INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
-                VALUES (%s, %s, FALSE, TRUE, 0.0, NULL)
-            """, (user_id, plant_id))
-            message = "Растение добавлено в мои растения"
-
-        conn.commit()
-        cursor.close()
-        conn.close()
+        repo = PlantRepository()
+        message = repo.add_or_update_user_my_plant(user_id, plant_id)
 
         return jsonify({"success": True, "message": message})
 
@@ -320,43 +445,59 @@ def add_my_plant(user_payload):
 @app.route('/api/userplants', methods=['GET'])
 @auth_required
 def user_my_plants(user_payload):
+    """
+    Get user's plants (favorites and my_plants)
+    ---
+    tags:
+      - Plants
+    security:
+      - Bearer: []
+    responses:
+      200:
+        description: User's plants retrieved
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            favorite:
+              type: array
+              items:
+                type: object
+                properties:
+                  plant_id:
+                    type: integer
+                  name:
+                    type: string
+                  description:
+                    type: string
+            my_plant:
+              type: array
+              items:
+                type: object
+                properties:
+                  plant_id:
+                    type: integer
+                  name:
+                    type: string
+                  description:
+                    type: string
+      401:
+        description: Unauthorized
+      500:
+        description: Server error
+    """
     user_id = user_payload.get("user_id")
 
     try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-
-        def get_plants_by_flag(flag_column: str):
-            """
-            Универсальная функция:
-            получает растения пользователя по флагу favorite / my_plant
-            """
-            cursor.execute(f"""
-                SELECT p.id, p.name, p.features
-                FROM user_plants up
-                JOIN plants p ON p.id = up.plant_id
-                WHERE up.user_id = %s AND up.{flag_column} = TRUE
-            """, (user_id,))
-
-            rows = cursor.fetchall()
-
-            results = []
-            for r in rows:
-                plant = {
-                    "id": int(r[0]),
-                    "name": r[1],
-                    "features": r[2],
-                }
-                results.append(_format_plant_response(plant))
-
-            return results
-
-        favorite_plants = get_plants_by_flag("favorite")
-        my_plants = get_plants_by_flag("my_plant")
-
-        cursor.close()
-        conn.close()
-        # print(my_plants)
+        repo = PlantRepository()
+        
+        favorite_plants_data = repo.get_user_plants_by_flag(user_id, "favorite")
+        my_plants_data = repo.get_user_plants_by_flag(user_id, "my_plant")
+        
+        # Format results
+        favorite_plants = [_format_plant_response(p) for p in favorite_plants_data]
+        my_plants = [_format_plant_response(p) for p in my_plants_data]
 
         return jsonify({
             "success": True,
@@ -365,7 +506,7 @@ def user_my_plants(user_payload):
         })
 
     except Exception as e:
-        print("Ошибка в /api/userfavoriteplants:", e)
+        print("Ошибка в /api/userplants:", e)
         return jsonify({
             "success": False,
             "message": "Ошибка получения растений пользователя"
@@ -374,7 +515,7 @@ def user_my_plants(user_payload):
 
 
 # -----------------------------
-# Search Similar Plants
+# Search Similar Plants - ML
 # -----------------------------
 def _build_search_prompt(search_criteria: dict) -> str:
     """Transform frontend search criteria into a text prompt for the ML model.
@@ -497,16 +638,101 @@ def _format_plant_response(plant_data: dict) -> dict:
 
 @app.route('/api/search-plants', methods=['POST'])
 def search_plants():
-    """Search for plants based on user criteria.
-    
-    Expects JSON with structure:
-    {
-        "location": {"text": "...", "tags": [...]},
-        "care_regime": {"text": "...", "tags": [...]},
-        "function": {"text": "...", "tags": [...]},
-        "size_type": {"text": "...", "tags": [...]},
-        "extra_notes": {"text": "...", "tags": [...]}
-    }
+    """
+    Search for plants based on user criteria
+    ---
+    tags:
+      - Plants
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            location:
+              type: object
+              properties:
+                text:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+            care_regime:
+              type: object
+              properties:
+                text:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+            function:
+              type: object
+              properties:
+                text:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+            size_type:
+              type: object
+              properties:
+                text:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+            extra_notes:
+              type: object
+              properties:
+                text:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+            recipient:
+              type: object
+              description: For gift search
+              properties:
+                text:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+            occasion:
+              type: object
+              description: For gift search
+              properties:
+                text:
+                  type: string
+                tags:
+                  type: array
+                  items:
+                    type: string
+    responses:
+      200:
+        description: Plants found
+        schema:
+          type: array
+          items:
+            type: object
+            properties:
+              plant_id:
+                type: integer
+              name:
+                type: string
+              description:
+                type: string
+      400:
+        description: Missing search criteria
+      500:
+        description: Search service error
     """
     try:
         from search_similar import PlantSearchService
@@ -544,6 +770,79 @@ def search_plants():
     except Exception as e:
         print("Ошибка при поиске растений:", e)
         return jsonify({"success": False, "message": "Ошибка при поиске растений"}), 500
+
+
+@app.route('/api/remove-plant', methods=['POST'])
+@auth_required
+def remove_plant(user_payload):
+    """
+    Remove plant from user's collection
+    ---
+    tags:
+      - Plants
+    security:
+      - Bearer: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - plant_id
+            - flag
+          properties:
+            plant_id:
+              type: integer
+              example: 1
+            flag:
+              type: string
+              enum: ['favorite', 'my_plant']
+              example: "favorite"
+              description: "Which flag to set to FALSE: 'favorite' removes from favorites, 'my_plant' removes from user's collection"
+    responses:
+      200:
+        description: Plant removed successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            message:
+              type: string
+      400:
+        description: Missing required fields or invalid flag
+      401:
+        description: Unauthorized
+      500:
+        description: Database error
+    """
+    user_id = user_payload.get("user_id")
+    
+    data = request.get_json()
+    if not data or "plant_id" not in data or "flag" not in data:
+        return jsonify({"success": False, "message": "Требуются plant_id и flag"}), 400
+    
+    plant_id = data["plant_id"]
+    flag = data["flag"]
+    
+    # Validate flag
+    if flag not in ['favorite', 'my_plant']:
+        return jsonify({"success": False, "message": "flag должен быть 'favorite' или 'my_plant'"}), 400
+    
+    try:
+        repo = PlantRepository()
+        message = repo.remove_user_plant_flag(user_id, plant_id, flag)
+        
+        return jsonify({"success": True, "message": message})
+    
+    except ValueError as e:
+        print(f"Ошибка валидации при удалении растения: {e}")
+        return jsonify({"success": False, "message": str(e)}), 400
+    
+    except Exception as e:
+        print(f"Ошибка при удалении растения: {e}")
+        return jsonify({"success": False, "message": "Ошибка удаления из БД"}), 500
 
 
 # -----------------------------

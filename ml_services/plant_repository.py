@@ -14,6 +14,7 @@ Results: list of tuples `(id: int, distance: float)` ordered by distance (asc).
 from __future__ import annotations
 
 import os
+import json
 from typing import List, Tuple, Dict, Any
 
 from dotenv import load_dotenv
@@ -87,3 +88,213 @@ class PlantRepository:
             })
 
         return results
+
+    def register_user(
+        self, 
+        name: str, 
+        email: str, 
+        encoded_password: str, 
+        features: Dict[str, Any], 
+        embedding: List[float], 
+        created_at, 
+        updated_at
+    ) -> Tuple[int, str]:
+        """Register a new user and set token.
+
+        Returns a tuple of (user_id, token) where token is the JWT token to be set.
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                # Insert user and get ID
+                cur.execute("""
+                    INSERT INTO users (name, email, password, created_at, updated_at, features, embedding)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id
+                """, (
+                    name,
+                    email,
+                    encoded_password,
+                    created_at,
+                    updated_at,
+                    json.dumps(features),
+                    embedding
+                ))
+
+                user_id = cur.fetchone()[0]
+                conn.commit()
+
+        return user_id
+
+    def update_user_token(self, user_id: int, token: str) -> None:
+        """Update user token in database."""
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("UPDATE users SET token = %s WHERE id = %s", (token, user_id))
+                conn.commit()
+
+    def get_user_by_email(self, email: str) -> Tuple[int, str] | None:
+        """Get user ID and password by email.
+        
+        Returns a tuple of (user_id, password) or None if user not found.
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT id, password FROM users WHERE email = %s", (email,))
+                row = cur.fetchone()
+                return row
+
+    def get_user_info(self, user_id: int) -> Dict[str, Any] | None:
+        """Get user info by ID.
+        
+        Returns a dict with user data or None if user not found.
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT id, name, email, created_at, updated_at, features, embedding
+                    FROM users
+                    WHERE id = %s
+                """, (user_id,))
+                row = cur.fetchone()
+                
+                if not row:
+                    return None
+                
+                return {
+                    "id": row[0],
+                    "name": row[1],
+                    "email": row[2],
+                    "created_at": row[3],
+                    "updated_at": row[4],
+                    "features": row[5],
+                    "embedding": row[6],
+                }
+
+    def check_user_plant_exists(self, user_id: int, plant_id: int) -> bool:
+        """Check if user already has this plant in any category."""
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT 1 FROM user_plants
+                    WHERE user_id = %s AND plant_id = %s
+                """, (user_id, plant_id))
+                return cur.fetchone() is not None
+
+    def add_user_plant_favorite(self, user_id: int, plant_id: int) -> None:
+        """Add plant to user's favorites."""
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
+                    VALUES (%s, %s, TRUE, FALSE, 0.0, NULL)
+                """, (user_id, plant_id))
+                conn.commit()
+
+    def add_or_update_user_my_plant(self, user_id: int, plant_id: int) -> str:
+        """Add or update user's own plant.
+        
+        Returns a message describing what was done.
+        """
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                # Check if record exists
+                cur.execute("""
+                    SELECT favorite, my_plant FROM user_plants
+                    WHERE user_id = %s AND plant_id = %s
+                """, (user_id, plant_id))
+                
+                existing_record = cur.fetchone()
+                
+                if existing_record:
+                    # Update existing record
+                    cur.execute("""
+                        UPDATE user_plants
+                        SET 
+                          my_plant = TRUE,
+                          favorite = FALSE
+                        WHERE user_id = %s AND plant_id = %s
+                    """, (user_id, plant_id))
+                    message = "Растение добавлено в мои растения"
+                else:
+                    # Insert new record
+                    cur.execute("""
+                        INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
+                        VALUES (%s, %s, FALSE, TRUE, 0.0, NULL)
+                    """, (user_id, plant_id))
+                    message = "Растение добавлено в мои растения"
+                
+                conn.commit()
+                return message
+
+    def get_user_plants_by_flag(self, user_id: int, flag_column: str) -> List[Dict[str, Any]]:
+        """Get user plants by flag (favorite or my_plant).
+        
+        Args:
+            user_id: User ID
+            flag_column: Column name ('favorite' or 'my_plant')
+        
+        Returns:
+            List of plant dicts with id, name, and features.
+        """
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+                cur.execute(f"""
+                    SELECT p.id, p.name, p.features
+                    FROM user_plants up
+                    JOIN plants p ON p.id = up.plant_id
+                    WHERE up.user_id = %s AND up.{flag_column} = TRUE
+                """, (user_id,))
+                
+                rows = cur.fetchall()
+                
+                results = []
+                for r in rows:
+                    plant = {
+                        "id": int(r['id']),
+                        "name": r.get('name'),
+                        "features": r.get('features'),
+                    }
+                    results.append(plant)
+                
+                return results
+
+    def remove_user_plant_flag(self, user_id: int, plant_id: int, flag: str) -> str:
+        """Remove plant from user's collection by setting flag to FALSE.
+        
+        Args:
+            user_id: User ID
+            plant_id: Plant ID
+            flag: Flag name ('favorite' or 'my_plant')
+        
+        Returns:
+            Message describing the action.
+            
+        Raises:
+            ValueError: If flag is not 'favorite' or 'my_plant'
+            Exception: If plant record doesn't exist
+        """
+        if flag not in ['favorite', 'my_plant']:
+            raise ValueError(f"Invalid flag: {flag}. Must be 'favorite' or 'my_plant'")
+        
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                # Check if record exists
+                cur.execute("""
+                    SELECT 1 FROM user_plants
+                    WHERE user_id = %s AND plant_id = %s
+                """, (user_id, plant_id))
+                
+                if not cur.fetchone():
+                    raise Exception(f"Plant record not found for user_id={user_id}, plant_id={plant_id}")
+                
+                # Set flag to FALSE
+                cur.execute(f"""
+                    UPDATE user_plants
+                    SET {flag} = FALSE
+                    WHERE user_id = %s AND plant_id = %s
+                """, (user_id, plant_id))
+                
+                conn.commit()
+                
+                flag_name = "избранное" if flag == "favorite" else "мои растения"
+                return f"Растение удалено из {flag_name}"
+
