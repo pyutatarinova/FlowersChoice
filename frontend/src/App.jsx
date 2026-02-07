@@ -125,7 +125,28 @@ const App = () => {
   }, []);
 
   const removePlant = useCallback(async (docId) => {
+  const token = localStorage.getItem('authToken');
+
+  try {
+    if (token) {
+      await fetch('http://localhost:3001/api/set-plant-flag', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          flag: 'my_plant',
+          plant_id: docId
+        })
+      });
+    }
+
     setMyPlants(prev => prev.filter(p => p.id !== docId));
+
+    } catch (e) {
+      console.error('Ошибка удаления из моих растений:', e);
+    }
   }, []);
 
   const updateUserProfile = useCallback(async (data) => {

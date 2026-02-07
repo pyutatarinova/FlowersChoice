@@ -33,10 +33,32 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate }) => {
     }
   };
   
-  const handleRemoveFavorite = (id) => {
+  const handleRemoveFavorite = async (id) => {
+  const token = localStorage.getItem('authToken');
+
+    try {
+    if (token) {
+      await fetch('http://localhost:3001/api/set-plant-flag', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          flag: 'favorite',
+          plant_id: id
+        })
+      });
+    }
+    
     setFavorites(prev => prev.filter(p => p.id !== id));
-    setSelectedForComparison(prev => prev.filter(pId => pId !== id)); 
+    setSelectedForComparison(prev => prev.filter(pId => pId !== id));
+
+    } catch (e) {
+      console.error('Ошибка удаления из избранного:', e);
+    }
   };
+
   const handleToggleDetails = (id) => setDetailedPlantId(detailedPlantId === id ? null : id);
   const handleToggleSelect = (id) => setSelectedForComparison(prev => prev.includes(id) ? prev.filter(pId => pId !== id) : [...prev, id]);
   const handleSelectAll = () => {
