@@ -176,10 +176,17 @@ const App = () => {
       mockResults.length = 0;
       data.forEach(p => mockResults.push(p));
 
+      setAnswers({});
+      setStep(0);
+      setMode(null);
+
       setIsLoading(false);
       setAppState("results");
     } catch (e) {
       console.error("Ошибка API:", e);
+      setAnswers({});
+      setStep(0);
+      setMode(null);
       setIsLoading(false);
       setAppState("results");
     }
