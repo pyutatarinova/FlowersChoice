@@ -3,6 +3,7 @@ userProfile.json
 venv
 ml_venv
 minio_venv
+minio data
 frontend/node_modules
 DB/postgres_data
 frontend/server.js
