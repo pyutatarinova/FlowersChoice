@@ -35,7 +35,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from tqdm import tqdm
 
-load_dotenv('backend/.env')
+load_dotenv('.env')
 
 # DB конфиг
 DB_HOST = os.getenv("DB_HOST") or "localhost"
@@ -79,22 +79,29 @@ def make_combined_text_from_row(row: dict) -> str:
     """Объединяет name и все поля из JSONB features в один текст"""
     parts = []
     
-    # Добавляем name
-    name = row.get("name")
-    if name and str(name).strip():
-        parts.append(f"name: {name}")
-    
-    # Добавляем все поля из JSONB features
+    # Добавляем name из поля features.plant_name_eng
     features = row.get("features")
     if features and isinstance(features, dict):
+        # Получаем английское название растения
+        name = features.get("plant_name_eng")
+        if name and str(name).strip():
+            parts.append(f"name: {name}")
+        
+        # Фильтруем ключи: либо заканчиваются на _eng, либо входят в разрешенный список
+        allowed_keys = {"min_temp", "max_temp", "comfort_temp", "misting", "flowerin", "fragrance"}
+        
         for key, value in features.items():
-            if value is None:
+            # Пропускаем plant_name_eng, так как оно уже обработано как name
+            if key == "plant_name_eng":
                 continue
-            s = str(value).strip()
-            if s == "" or s.lower() == "nan":
-                continue
-            parts.append(f"{key}: {s}")
-            # print(parts)
+                
+            # Проверяем, подходит ли ключ под критерии
+            is_allowed_key = key in allowed_keys or key.endswith("_eng")
+            
+            if is_allowed_key and value is not None:
+                s = str(value).strip()
+                if s and s.lower() != "nan":
+                    parts.append(f"{key}: {s}")
     
     return ". ".join(parts)  # name: Красная роза. description: Красивая красная роза. price: 250.0
 
