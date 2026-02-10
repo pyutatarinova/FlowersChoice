@@ -35,8 +35,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from tqdm import tqdm
 
-
-load_dotenv()
+load_dotenv('backend/.env')
 
 # DB конфиг
 DB_HOST = os.getenv("DB_HOST") or "localhost"

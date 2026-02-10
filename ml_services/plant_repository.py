@@ -23,7 +23,7 @@ from psycopg2 import sql
 import psycopg2.extras as extras
 
 
-load_dotenv()
+load_dotenv('.env')
 
 
 def _get_dsn() -> str:
