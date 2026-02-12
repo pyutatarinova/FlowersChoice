@@ -3,6 +3,9 @@ import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, Chev
 import { mockResults } from '../../constants/mockResults';
 import ManualSelectionCard from './ManualSelectionCard';
 
+let manualCache = null;
+let manualLoadPromise = null;
+
 const shufflePlants = (plants) => {
   const list = [...plants];
   for (let i = list.length - 1; i > 0; i -= 1) {
@@ -13,9 +16,10 @@ const shufflePlants = (plants) => {
 };
 
 const ManualSelectionScreen = ({ favorites, setFavorites }) => {
-  const [allPlants, setAllPlants] = useState(mockResults);
-  const [currentPair, setCurrentPair] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [allPlants, setAllPlants] = useState(manualCache?.allPlants || []);
+  const [currentPair, setCurrentPair] = useState(manualCache?.currentPair || []);
+  const [isLoading, setIsLoading] = useState(!manualCache);
+  const [isReady, setIsReady] = useState(!!manualCache);
 
   const poolRef = useRef([]);
   const cursorRef = useRef(0);
@@ -35,41 +39,87 @@ const ManualSelectionScreen = ({ favorites, setFavorites }) => {
     return next;
   }, []);
 
-  const resetPool = useCallback((plants) => {
+  const initPool = useCallback((plants) => {
     const shuffled = shufflePlants(plants);
     poolRef.current = shuffled;
     cursorRef.current = 0;
     viewedRef.current = new Set();
     const first = getNextPlant();
     const second = getNextPlant();
-    setCurrentPair([first, second].filter(Boolean));
+    const pair = [first, second].filter(Boolean);
+    setCurrentPair(pair);
+    return pair;
   }, [getNextPlant]);
 
   useEffect(() => {
     const loadPlants = async () => {
+      if (manualCache) {
+        poolRef.current = manualCache.pool || [];
+        cursorRef.current = manualCache.cursor || 0;
+        viewedRef.current = new Set(manualCache.viewed || []);
+        setAllPlants(manualCache.allPlants || []);
+        setCurrentPair(manualCache.currentPair || []);
+        setIsLoading(false);
+        setIsReady(true);
+        return;
+      }
+
       setIsLoading(true);
       try {
-        const response = await fetch('http://localhost:3001/api/plants-rating?page=1&per_page=50');
-        const data = await response.json();
-        if (data && data.success && Array.isArray(data.plants) && data.plants.length > 0) {
-          setAllPlants(data.plants);
-        } else {
-          setAllPlants(mockResults);
+        if (!manualLoadPromise) {
+          manualLoadPromise = fetch('http://localhost:3001/api/plants-rating?page=1&per_page=50')
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.success && Array.isArray(data.plants) && data.plants.length > 0) {
+                return data.plants;
+              }
+              return mockResults;
+            })
+            .catch(() => mockResults);
         }
+
+        const plants = await manualLoadPromise;
+        setAllPlants(plants);
+        const pair = initPool(plants);
+        setIsReady(true);
+        manualCache = {
+          allPlants: plants,
+          pool: poolRef.current,
+          cursor: cursorRef.current,
+          viewed: Array.from(viewedRef.current),
+          currentPair: pair
+        };
       } catch (e) {
         console.error('Ошибка загрузки растений для ручного режима:', e);
-        setAllPlants(mockResults);
+        const plants = mockResults;
+        setAllPlants(plants);
+        const pair = initPool(plants);
+        setIsReady(true);
+        manualCache = {
+          allPlants: plants,
+          pool: poolRef.current,
+          cursor: cursorRef.current,
+          viewed: Array.from(viewedRef.current),
+          currentPair: pair
+        };
       } finally {
         setIsLoading(false);
       }
     };
 
     loadPlants();
-  }, []);
+  }, [initPool]);
 
   useEffect(() => {
-    resetPool(allPlants);
-  }, [allPlants, resetPool]);
+    if (!isReady) return;
+    manualCache = {
+      allPlants,
+      pool: poolRef.current,
+      cursor: cursorRef.current,
+      viewed: Array.from(viewedRef.current),
+      currentPair
+    };
+  }, [allPlants, currentPair, isReady]);
 
   const replaceCard = useCallback((indexToReplace, keepIfNone) => {
     const next = getNextPlant();
@@ -115,7 +165,7 @@ const ManualSelectionScreen = ({ favorites, setFavorites }) => {
     replaceCard(index, false);
   };
 
-  if (isLoading) {
+  if (isLoading || !isReady) {
     return (
       <div className="text-center text-lg text-emerald-500 p-8 bg-white rounded-xl shadow-lg">
         Загружаем растения для ручного выбора...
