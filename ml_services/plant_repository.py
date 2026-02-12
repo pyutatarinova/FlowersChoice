@@ -189,7 +189,7 @@ class PlantRepository:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
+                    INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, features)
                     VALUES (%s, %s, TRUE, FALSE, 0.0, NULL)
                 """, (user_id, plant_id))
                 conn.commit()
@@ -222,7 +222,7 @@ class PlantRepository:
                 else:
                     # Insert new record
                     cur.execute("""
-                        INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
+                        INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, features)
                         VALUES (%s, %s, FALSE, TRUE, 0.0, NULL)
                     """, (user_id, plant_id))
                     message = "Растение добавлено в мои растения"
@@ -393,3 +393,160 @@ class PlantRepository:
             })
         
         return results
+
+    def get_plants_rating_filtered(
+        self,
+        search: str | None = None,
+        comfort_temp: float | None = None,
+        flowering_misting: bool | None = None,
+        growth_rate: str | None = None,
+        toxicity: str | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Get plants rating with server-side filters.
+
+        Filters:
+        - search by plant name (ILIKE)
+        - comfort_temp: a single numeric value must fall into plant comfort_temp range
+        - flowering_misting: boolean filter
+        - growth_rate: exact match (case-insensitive)
+        - toxicity: one of 'Не токсичен', 'Умеренно', 'Токсичен'
+        """
+        where_clauses: List[str] = []
+        params: List[Any] = []
+
+        if search:
+            where_clauses.append("p.name ILIKE %s")
+            params.append(f"%{search.strip()}%")
+
+        if comfort_temp is not None:
+            where_clauses.append("""
+                temp_match IS NOT NULL
+                AND %s::numeric BETWEEN
+                    LEAST((temp_match)[1]::numeric, (temp_match)[2]::numeric)
+                    AND
+                    GREATEST((temp_match)[1]::numeric, (temp_match)[2]::numeric)
+            """)
+            params.append(float(comfort_temp))
+
+        if flowering_misting is not None:
+            where_clauses.append("""
+                (
+                    CASE
+                        WHEN LOWER(TRIM(COALESCE(p.features->>'flowering_misting', p.features->>'misting', ''))) IN ('true', '1', 'yes')
+                            THEN TRUE
+                        WHEN LOWER(TRIM(COALESCE(p.features->>'flowering_misting', p.features->>'misting', ''))) IN ('false', '0', 'no')
+                            THEN FALSE
+                        ELSE NULL
+                    END
+                ) = %s
+            """)
+            params.append(bool(flowering_misting))
+
+        if growth_rate:
+            where_clauses.append("LOWER(TRIM(COALESCE(p.features->>'growth_rate', ''))) = LOWER(TRIM(%s))")
+            params.append(growth_rate.strip())
+
+        if toxicity:
+            toxicity_clause, toxicity_params = self._get_toxicity_filter_clause_with_params(toxicity)
+            where_clauses.append(toxicity_clause)
+            params.extend(toxicity_params)
+
+        where_sql = ""
+        if where_clauses:
+            where_sql = "WHERE " + " AND ".join(where_clauses)
+
+        query = f"""
+            SELECT
+                p.id,
+                p.name,
+                p.features,
+                AVG(up.score) AS avg_score,
+                COUNT(up.user_id) AS rating_count
+            FROM plants p
+            LEFT JOIN user_plants up ON p.id = up.plant_id
+            LEFT JOIN LATERAL regexp_match(
+                REPLACE(COALESCE(p.features->>'comfort_temp', ''), ',', '.'),
+                '([0-9]+(?:\\.[0-9]+)?)\\s*-\\s*([0-9]+(?:\\.[0-9]+)?)'
+            ) AS temp_match ON TRUE
+            {where_sql}
+            GROUP BY p.id, p.name, p.features
+            ORDER BY avg_score DESC NULLS LAST, p.id ASC
+        """
+
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+                cur.execute(query, params)
+                rows = cur.fetchall()
+
+        results: List[Dict[str, Any]] = []
+        for index, r in enumerate(rows, start=1):
+            results.append({
+                'id': int(r['id']),
+                'name': r.get('name'),
+                'features': r.get('features'),
+                'avg_score': float(r.get('avg_score')) if r.get('avg_score') is not None else 0.0,
+                'rating_count': int(r.get('rating_count')) if r.get('rating_count') is not None else 0,
+                'rating_position': index,
+            })
+
+        return results
+
+    def _get_toxicity_filter_clause_with_params(self, toxicity: str) -> Tuple[str, List[Any]]:
+        """Get SQL WHERE clause and parameters for toxicity filtering.
+        
+        Maps Russian toxicity categories to patterns in the database.
+        Returns a tuple of (clause_string, params_list)
+        """
+        toxicity = toxicity.strip().lower()
+        
+        if toxicity == 'не токсичен':
+            # Non-toxic patterns - use ILIKE for case-insensitive matching
+            patterns = [
+                '%в целом не токсичен%',
+                '%нетоксичен для человека%',
+                '%нетоксично%',
+                '%обычно считается нетоксичным%',
+                '%нетоксичны%',
+                '%не токсичен%',
+            ]
+            clause_parts = ["LOWER(COALESCE(p.features->>'toxicity', '')) LIKE %s"] * len(patterns)
+            clause = f"({' OR '.join(clause_parts)})"
+            return clause, patterns
+            
+        elif toxicity == 'умеренно':
+            # Moderately toxic patterns
+            patterns = [
+                '%может быть слегка токсичным%',
+                '%умеренно токсич%',
+                '%некоторые виды токсичны или умеренно%',
+            ]
+            clause_parts = ["LOWER(COALESCE(p.features->>'toxicity', '')) LIKE %s"] * len(patterns)
+            clause = f"({' OR '.join(clause_parts)})"
+            return clause, patterns
+            
+        elif toxicity == 'токсичен':
+            # Toxic patterns
+            toxic_patterns = [
+                '%токсичен для домашних%',
+                '%токсично для домашних%',
+            ]
+            # Should not match moderate or non-toxic
+            not_patterns = [
+                '%может быть слегка%',
+                '%умеренно%',
+                '%не токсичен%',
+                '%нетоксичен%',
+                '%нетоксично%',
+            ]
+            
+            toxic_clause_parts = ["LOWER(COALESCE(p.features->>'toxicity', '')) LIKE %s"] * len(toxic_patterns)
+            toxic_clause = f"({' OR '.join(toxic_clause_parts)})"
+            
+            not_clause_parts = ["LOWER(COALESCE(p.features->>'toxicity', '')) NOT LIKE %s"] * len(not_patterns)
+            not_clause = f"({' AND '.join(not_clause_parts)})"
+            
+            clause = f"{toxic_clause} AND {not_clause}"
+            return clause, toxic_patterns + not_patterns
+        
+        # Default: no filter
+        return "1=1", []
