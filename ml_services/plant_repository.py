@@ -393,3 +393,93 @@ class PlantRepository:
             })
         
         return results
+
+    def get_plants_rating_filtered(
+        self,
+        search: str | None = None,
+        comfort_temp: float | None = None,
+        flowering_misting: bool | None = None,
+        growth_rate: str | None = None,
+    ) -> List[Dict[str, Any]]:
+        """Get plants rating with server-side filters.
+
+        Filters:
+        - search by plant name (ILIKE)
+        - comfort_temp: a single numeric value must fall into plant comfort_temp range
+        - flowering_misting: boolean filter
+        - growth_rate: exact match (case-insensitive)
+        """
+        where_clauses: List[str] = []
+        params: List[Any] = []
+
+        if search:
+            where_clauses.append("p.name ILIKE %s")
+            params.append(f"%{search.strip()}%")
+
+        if comfort_temp is not None:
+            where_clauses.append("""
+                temp_match IS NOT NULL
+                AND %s::numeric BETWEEN
+                    LEAST((temp_match)[1]::numeric, (temp_match)[2]::numeric)
+                    AND
+                    GREATEST((temp_match)[1]::numeric, (temp_match)[2]::numeric)
+            """)
+            params.append(float(comfort_temp))
+
+        if flowering_misting is not None:
+            where_clauses.append("""
+                (
+                    CASE
+                        WHEN LOWER(TRIM(COALESCE(p.features->>'flowering_misting', p.features->>'misting', ''))) IN ('true', '1', 'yes')
+                            THEN TRUE
+                        WHEN LOWER(TRIM(COALESCE(p.features->>'flowering_misting', p.features->>'misting', ''))) IN ('false', '0', 'no')
+                            THEN FALSE
+                        ELSE NULL
+                    END
+                ) = %s
+            """)
+            params.append(bool(flowering_misting))
+
+        if growth_rate:
+            where_clauses.append("LOWER(TRIM(COALESCE(p.features->>'growth_rate', ''))) = LOWER(TRIM(%s))")
+            params.append(growth_rate.strip())
+
+        where_sql = ""
+        if where_clauses:
+            where_sql = "WHERE " + " AND ".join(where_clauses)
+
+        query = f"""
+            SELECT
+                p.id,
+                p.name,
+                p.features,
+                AVG(up.score) AS avg_score,
+                COUNT(up.user_id) AS rating_count
+            FROM plants p
+            LEFT JOIN user_plants up ON p.id = up.plant_id
+            LEFT JOIN LATERAL regexp_match(
+                REPLACE(COALESCE(p.features->>'comfort_temp', ''), ',', '.'),
+                '([0-9]+(?:\\.[0-9]+)?)\\s*-\\s*([0-9]+(?:\\.[0-9]+)?)'
+            ) AS temp_match ON TRUE
+            {where_sql}
+            GROUP BY p.id, p.name, p.features
+            ORDER BY avg_score DESC NULLS LAST, p.id ASC
+        """
+
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+                cur.execute(query, params)
+                rows = cur.fetchall()
+
+        results: List[Dict[str, Any]] = []
+        for index, r in enumerate(rows, start=1):
+            results.append({
+                'id': int(r['id']),
+                'name': r.get('name'),
+                'features': r.get('features'),
+                'avg_score': float(r.get('avg_score')) if r.get('avg_score') is not None else 0.0,
+                'rating_count': int(r.get('rating_count')) if r.get('rating_count') is not None else 0,
+                'rating_position': index,
+            })
+
+        return results

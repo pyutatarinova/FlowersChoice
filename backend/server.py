@@ -1079,6 +1079,74 @@ def plants_rating():
         return jsonify({"success": False, "message": "Ошибка получения рейтинга"}), 500
 
 
+@app.route('/api/plants-rating/filter', methods=['GET'])
+def plants_rating_filter():
+    """Get plants rating with server-side filters."""
+    try:
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 200, type=int)
+        search = request.args.get('search', default=None, type=str)
+        growth_rate = request.args.get('growth_rate', default=None, type=str)
+        comfort_temp_raw = request.args.get('comfort_temp', default=None, type=str)
+        flowering_misting_raw = request.args.get('flowering_misting', default=None, type=str)
+
+        if page < 1:
+            page = 1
+        if per_page < 1 or per_page > 200:
+            per_page = 200
+
+        comfort_temp = None
+        if comfort_temp_raw is not None and str(comfort_temp_raw).strip() != "":
+            comfort_temp = float(str(comfort_temp_raw).replace(',', '.'))
+
+        flowering_misting = None
+        if flowering_misting_raw is not None and str(flowering_misting_raw).strip() != "":
+            normalized_bool = str(flowering_misting_raw).strip().lower()
+            if normalized_bool in ('true', '1', 'yes'):
+                flowering_misting = True
+            elif normalized_bool in ('false', '0', 'no'):
+                flowering_misting = False
+            else:
+                return jsonify({"success": False, "message": "Invalid flowering_misting value"}), 400
+
+        repo = PlantRepository()
+        all_plants = repo.get_plants_rating_filtered(
+            search=search,
+            comfort_temp=comfort_temp,
+            flowering_misting=flowering_misting,
+            growth_rate=growth_rate,
+        )
+
+        total_count = len(all_plants)
+        total_pages = (total_count + per_page - 1) // per_page if total_count > 0 else 1
+
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+
+        if page > total_pages and total_count > 0:
+            return jsonify({
+                "success": False,
+                "message": f"Page {page} does not exist. Total pages: {total_pages}"
+            }), 400
+
+        paginated_plants = all_plants[start_idx:end_idx]
+        formatted_plants = [_format_plant_response_with_rating(p) for p in paginated_plants]
+
+        return jsonify({
+            "success": True,
+            "total_count": total_count,
+            "page": page,
+            "per_page": per_page,
+            "total_pages": total_pages,
+            "plants": formatted_plants
+        })
+
+    except ValueError:
+        return jsonify({"success": False, "message": "Invalid comfort_temp value"}), 400
+    except Exception as e:
+        print(f"Error in /api/plants-rating/filter: {e}")
+        return jsonify({"success": False, "message": "Filter rating error"}), 500
+
 # -----------------------------
 # Start server
 # -----------------------------
