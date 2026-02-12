@@ -100,7 +100,6 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
           <div className="mb-8">
             <div className="inline-flex items-center justify-center mb-6">
               <div className="relative">
-                <div className="absolute -inset-4 bg-gradient-to-r from-emerald-400/30 via-lime-400/30 to-emerald-400/30 rounded-full animate-pulse-slow"></div>
                 <div className="relative bg-gradient-to-br from-emerald-600 to-lime-500 p-6 rounded-2xl shadow-2xl">
                   <Leaf className="w-12 h-12 text-white" />
                 </div>
@@ -609,7 +608,7 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
   
   // Футер
   const Footer = () => (
-    <footer className="bg-emerald-900 text-emerald-100 py-12 px-4">
+    <footer className="mt-20 bg-emerald-900 text-emerald-100 py-12 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <div>
@@ -661,15 +660,17 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
   );
 
   return (
-    <div ref={containerRef} className="relative">
+    <div ref={containerRef} className="relative min-h-screen flex flex-col">
       {/* Основные секции */}
-      <HeroSection />
-      <PrinciplesSection />
-      <CareSection />
-      <SelectionSection />
-      <AdvantagesSection />
-      <FAQSection />
-      <CTASection />
+      <div className="flex-1">
+        <HeroSection />
+        <PrinciplesSection />
+        <CareSection />
+        <SelectionSection />
+        <AdvantagesSection />
+        <FAQSection />
+        <CTASection />
+      </div>
       <Footer />
       
       {/* Глобальные стили анимаций */}

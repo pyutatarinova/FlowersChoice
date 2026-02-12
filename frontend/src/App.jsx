@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
+import LandingPage from './LendingPage';
 
 // header
 import Header from './components/header/Header';
@@ -65,7 +66,7 @@ const getWateringStatus = (wateringHistory, wateringScheduleDays) => {
 
 // --- Главный компонент App ---
 const App = () => {
-  const [appState, setAppState] = useState('home');
+  const [appState, setAppState] = useState('landing');
   const [mode, setMode] = useState(null);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -290,6 +291,21 @@ const App = () => {
   const renderContent = () => {
 
     switch (appState) {
+      case 'landing': return (
+        <LandingPage
+          onStartSelection={(selectedMode) => {
+            if (selectedMode === 'self' || selectedMode === 'gift') {
+              selectMode(selectedMode);
+              return;
+            }
+            navigate('home');
+          }}
+          onShowAuth={(type) => {
+            if (type === 'login') setShowLoginWidget(true);
+            else setShowAuthWidget(true);
+          }}
+        />
+      );
       case 'home': return (
           <div className="p-6 bg-white rounded-2xl shadow-xl">
               <h2 className="text-3xl font-bold text-emerald-800 mb-4 text-center">Flowers'Choice: Подберите свой идеальный цветок</h2>
@@ -343,10 +359,14 @@ const App = () => {
   return (
     <div className="min-h-screen bg-emerald-50 flex flex-col font-sans antialiased">
       <Header favoritesCount={favorites.length} myPlantsCount={myPlants.length} onNavigate={navigate} userId={userId} userName={userProfile?.name || ''} />
-      <main className="flex-grow p-4 sm:p-8 max-w-4xl w-full mx-auto">
-        <div className="w-full h-full flex flex-col justify-center py-8">
-          {renderContent()}
-        </div>
+      <main className={appState === 'landing' ? 'flex-grow' : 'flex-grow p-4 sm:p-8 max-w-4xl w-full mx-auto'}>
+        {appState === 'landing' ? (
+          renderContent()
+        ) : (
+          <div className="w-full h-full flex flex-col justify-center py-8">
+            {renderContent()}
+          </div>
+        )}
       </main>
       {/* Модальное окно регистрации */}
       {showAuthWidget && (
@@ -423,9 +443,11 @@ const App = () => {
           }}
         />
       )}
-      <div className="p-4 text-center text-xs text-gray-400">
-          {userId && `Текущий ID пользователя: ${userId}`}
-      </div>
+      {userId && (
+        <div className="p-4 text-center text-xs text-gray-400">
+          {`Текущий ID пользователя: ${userId}`}
+        </div>
+      )}
     </div>
   );
 };
