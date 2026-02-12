@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+﻿import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import LandingPage from './LendingPage';
 
@@ -21,6 +21,9 @@ import ComparisonScreen from './components/comparison/ComparisonScreen';
 
 // favorites
 import FavoritesScreen from './components/favorites/FavoritesScreen';
+
+// manual selection
+import ManualSelectionScreen from './components/manual/ManualSelectionScreen';
 
 // my plants
 import MyPlantsScreen from './components/my-plants/MyPlantsScreen';
@@ -130,7 +133,7 @@ const App = () => {
 
   try {
     if (token) {
-      await fetch('http://localhost:3001/api/set-plant-flag', {
+      await fetch('http://localhost:3001/api/remove-plant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -320,7 +323,12 @@ const App = () => {
                       <span className="text-base font-semibold text-emerald-700">Выбираю в подарок</span>
                   </button>
               </div>
-              <p className="text-center text-sm text-emerald-500 mt-6">Начните с выбора режима.</p>
+                            <p className="text-center text-sm text-emerald-600 mt-5">
+                <span onClick={() => navigate('manual_selection')} className="underline cursor-pointer hover:text-emerald-700">
+                  Режим ручного выбора
+                </span>
+              </p>
+<p className="text-center text-sm text-emerald-500 mt-6">Начните с выбора режима.</p>
           </div>
       );
       case 'questionnaire': 
@@ -334,6 +342,7 @@ const App = () => {
       case 'loading': return <LoadingScreen />;
       case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
       case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
+      case 'manual_selection': return <ManualSelectionScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
       case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} />;
       case 'my_plants': return <MyPlantsScreen myPlants={myPlants} onUpdatePlant={updatePlant} onRemovePlant={removePlant} onNavigate={navigate} />;
       case 'profile': return <ProfileScreen
