@@ -189,7 +189,7 @@ class PlantRepository:
         with self._get_connection() as conn:
             with conn.cursor() as cur:
                 cur.execute("""
-                    INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
+                    INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, features)
                     VALUES (%s, %s, TRUE, FALSE, 0.0, NULL)
                 """, (user_id, plant_id))
                 conn.commit()
@@ -222,7 +222,7 @@ class PlantRepository:
                 else:
                     # Insert new record
                     cur.execute("""
-                        INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, comment)
+                        INSERT INTO user_plants (user_id, plant_id, favorite, my_plant, score, features)
                         VALUES (%s, %s, FALSE, TRUE, 0.0, NULL)
                     """, (user_id, plant_id))
                     message = "Растение добавлено в мои растения"

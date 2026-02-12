@@ -978,7 +978,7 @@ def plants_rating():
         in: query
         type: integer
         default: 20
-        description: "Items per page (1-100)"
+        description: "Items per page (1-200)"
     responses:
       200:
         description: Plants rating retrieved
@@ -1039,7 +1039,7 @@ def plants_rating():
         # Validate pagination parameters
         if page < 1:
             page = 1
-        if per_page < 1 or per_page > 100:
+        if per_page < 1 or per_page > 200:
             per_page = 20
         
         repo = PlantRepository()
