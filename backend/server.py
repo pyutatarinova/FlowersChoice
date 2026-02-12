@@ -1081,7 +1081,55 @@ def plants_rating():
 
 @app.route('/api/plants-rating/filter', methods=['GET'])
 def plants_rating_filter():
-    """Get plants rating with server-side filters."""
+    """
+    Get filtered and paginated plants rating.
+    ---
+    tags:
+      - Plants
+    parameters:
+      - name: page
+        in: query
+        type: integer
+        default: 1
+      - name: per_page
+        in: query
+        type: integer
+        default: 200
+      - name: search
+        in: query
+        type: string
+      - name: growth_rate
+        in: query
+        type: string
+        enum: [Умеренный, Быстрый, fast]
+      - name: comfort_temp
+        in: query
+        type: number
+      - name: flowering_misting
+        in: query
+        type: boolean
+    responses:
+      200:
+        description: Success
+        schema:
+          type: object
+          properties:
+            success: {type: boolean}
+            total_count: {type: integer}
+            page: {type: integer}
+            per_page: {type: integer}
+            total_pages: {type: integer}
+            plants: {type: array, items: {type: object}}
+      400:
+        description: Invalid parameters
+        schema:
+          type: object
+          properties:
+            success: {type: boolean}
+            message: {type: string}
+      500:
+        description: Server error
+    """
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 200, type=int)

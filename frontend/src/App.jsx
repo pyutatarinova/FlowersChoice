@@ -153,6 +153,64 @@ const App = () => {
     setUserProfile(prev => ({ ...prev, ...data }));
   }, []);
 
+  const transformMyPlants = useCallback((plants = []) => {
+    return plants.map(plant => ({
+      id: plant.id,
+      originalId: plant.id,
+      name: plant.plant_name,
+      latin: plant.plant_name,
+      image: plant.photo,
+      details: plant.brief_description,
+      traits: {
+        light: plant.light_requirements,
+        water: plant.watering_frequency,
+        temp: plant.comfort_temp,
+        size: plant.mature_size
+      },
+      notes: '',
+      rating: 5,
+      wateringSchedule: 7,
+      wateringHistory: [new Date()],
+      addedAt: new Date()
+    }));
+  }, []);
+
+  const loadUserPlantsData = useCallback(async (token) => {
+    if (!token) {
+      setFavorites([]);
+      setMyPlants([]);
+      return;
+    }
+
+    try {
+      const favRes = await fetch('http://localhost:3001/api/userplants', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (favRes.status === 401) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userProfile');
+        setFavorites([]);
+        setMyPlants([]);
+        setUserProfile({});
+        return;
+      }
+
+      const favData = await favRes.json();
+      if (favData.success) {
+        setFavorites(Array.isArray(favData.favorite) ? favData.favorite : []);
+        setMyPlants(transformMyPlants(Array.isArray(favData.my_plant) ? favData.my_plant : []));
+      } else {
+        setFavorites([]);
+        setMyPlants([]);
+      }
+    } catch (e) {
+      console.error('Ошибка получения растений пользователя:', e);
+      setFavorites([]);
+      setMyPlants([]);
+    }
+  }, [transformMyPlants]);
+
   // --- NAVIGATION & UTILS ---
   const currentQuestions = useMemo(() => mode ? QUESTIONS[mode] : [], [mode]);
   const totalSteps = currentQuestions.length;
@@ -217,6 +275,16 @@ const App = () => {
   
   useEffect(() => { window.AppFunctions = { addToMyPlants }; }, [addToMyPlants]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setFavorites([]);
+      setMyPlants([]);
+      return;
+    }
+    loadUserPlantsData(token);
+  }, [loadUserPlantsData]);
+
 
   // --- RENDER CONTENT ---
   const renderContent = () => {
@@ -259,7 +327,10 @@ const App = () => {
           else setShowAuthWidget(true);
         }}
         onLogout={() => {
+          localStorage.removeItem('authToken');
           localStorage.removeItem('userProfile');
+          setFavorites([]);
+          setMyPlants([]);
           setUserProfile({});
           setAppState('home');
         }}
@@ -311,35 +382,7 @@ const App = () => {
                 localStorage.setItem('userProfile', JSON.stringify(data.user));
               }
               
-              // Загружаем избранные растения пользователя (для нового пользователя пустой список)
-              const favRes = await fetch('http://localhost:3001/api/userplants', {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              const favData = await favRes.json();
-              if (favData.success) {
-                setFavorites(favData.favorite);
-                // Преобразуем my_plant в формат для myPlants
-                const transformedMyPlants = favData.my_plant.map(plant => ({
-                  id: plant.id,
-                  originalId: plant.id,
-                  name: plant.plant_name,
-                  latin: plant.plant_name,
-                  image: plant.photo,
-                  details: plant.brief_description,
-                  traits: {
-                    light: plant.light_requirements,
-                    water: plant.watering_frequency,
-                    temp: plant.comfort_temp,
-                    size: plant.mature_size
-                  },
-                  notes: '',
-                  rating: 5,
-                  wateringSchedule: 7,
-                  wateringHistory: [new Date()],
-                  addedAt: new Date()
-                }));
-                setMyPlants(transformedMyPlants);
-              }
+              await loadUserPlantsData(token);
             } catch (e) {
               console.error('Ошибка получения профиля или избранных:', e);
             }
@@ -371,35 +414,7 @@ const App = () => {
                 localStorage.setItem('userProfile', JSON.stringify(data.user));
               }
               
-              // Загружаем избранные растения пользователя
-              const favRes = await fetch('http://localhost:3001/api/userplants', {
-                headers: { 'Authorization': `Bearer ${token}` }
-              });
-              const favData = await favRes.json();
-              if (favData.success) {
-                setFavorites(favData.favorite);
-                // Преобразуем my_plant в формат для myPlants
-                const transformedMyPlants = favData.my_plant.map(plant => ({
-                  id: plant.id,
-                  originalId: plant.id,
-                  name: plant.plant_name,
-                  latin: plant.plant_name,
-                  image: plant.photo,
-                  details: plant.brief_description,
-                  traits: {
-                    light: plant.light_requirements,
-                    water: plant.watering_frequency,
-                    temp: plant.comfort_temp,
-                    size: plant.mature_size
-                  },
-                  notes: '',
-                  rating: 5,
-                  wateringSchedule: 7,
-                  wateringHistory: [new Date()],
-                  addedAt: new Date()
-                }));
-                setMyPlants(transformedMyPlants);
-              }
+              await loadUserPlantsData(token);
             } catch (e) {
               console.error('Ошибка получения профиля или избранных:', e);
             }
