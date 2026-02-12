@@ -1,5 +1,5 @@
-import React from 'react';
-import { Heart, ChevronRight, Minus } from 'lucide-react';
+import React, { useState } from 'react';
+import { Heart, ChevronRight, Minus, Maximize2, X } from 'lucide-react';
 
 const StarIcon = ({ fillFraction = 0, uniqueId }) => {
   const clamped = Math.max(0, Math.min(1, fillFraction));
@@ -41,12 +41,25 @@ const formatRating = (ratingValue) => {
 
 const RatingPlantCard = ({ plant, isFavorite, onToggleDetails, isDetailed, onAddToFavorites }) => {
   const rating = Number(plant.avg_score ?? 0);
+  const [isImageExpanded, setIsImageExpanded] = useState(false);
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-emerald-100 mb-4 overflow-hidden">
       <div className="p-4 flex items-center justify-between">
         <div className="w-8/12 flex items-center space-x-4">
-          <img src={plant.photo} alt={plant.plant_name} className="w-12 h-12 object-cover rounded-lg" />
+          <div
+            className="relative group cursor-pointer"
+            onClick={() => setIsImageExpanded(!isImageExpanded)}
+          >
+            <img
+              src={plant.photo}
+              alt={plant.plant_name}
+              className="w-12 h-12 object-cover rounded-lg transition-transform duration-200 group-hover:scale-110"
+            />
+            <div className="absolute inset-0 rounded-lg bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <Maximize2 className="w-4 h-4 text-white drop-shadow-lg" />
+            </div>
+          </div>
           <div>
             <h4 className="text-lg font-semibold text-emerald-800">{plant.plant_name}</h4>
 
@@ -89,6 +102,39 @@ const RatingPlantCard = ({ plant, isFavorite, onToggleDetails, isDetailed, onAdd
             <p><b>💧 Полив:</b> {plant.watering_frequency}</p>
             <p><b>🌡 Темп.:</b> {plant.comfort_temp}</p>
             <p><b>📏 Размер:</b> {plant.mature_size}</p>
+          </div>
+        </div>
+      )}
+
+      {isImageExpanded && (
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setIsImageExpanded(false)}
+        >
+          <div
+            className="relative max-w-2xl max-h-[90vh] bg-white rounded-2xl overflow-hidden shadow-2xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setIsImageExpanded(false)}
+              className="absolute top-3 right-3 z-10 p-2 bg-emerald-600 text-white rounded-full hover:bg-emerald-700 transition-colors shadow-lg"
+              aria-label="Закрыть"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="p-6 border-b border-emerald-100 bg-white">
+              <h3 className="text-xl font-semibold text-emerald-800">{plant.plant_name}</h3>
+              <p className="text-sm text-emerald-600 mt-2">{plant.brief_description}</p>
+            </div>
+
+            <div className="flex-1 flex items-center justify-center bg-emerald-50 p-4">
+              <img
+                src={plant.photo}
+                alt={plant.plant_name}
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
           </div>
         </div>
       )}

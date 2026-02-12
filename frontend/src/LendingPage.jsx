@@ -589,9 +589,8 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
         </div>
         
         {/* Счётчики */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-16">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-16">
           {[
-            { number: "10K+", label: "Счастливых растений" },
             { number: "95%", label: "Успешных подборов" },
             { number: "24/7", label: "Поддержка" },
             { number: "∞", label: "Зелёных возможностей" }
@@ -626,34 +625,30 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
             <ul className="space-y-2">
               <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Главная</a></li>
               <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">О нас</a></li>
-              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Растения</a></li>
-              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Блог</a></li>
+              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Избранные</a></li>
+              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Контакты</a></li>
             </ul>
           </div>
           
           <div>
             <h4 className="text-lg font-bold mb-4">Ресурсы</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Энциклопедия растений</a></li>
-              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Гид по уходу</a></li>
+              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Рейтинг растений</a></li>
+              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Подбор растений</a></li>
               <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Сообщество</a></li>
-              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Для бизнеса</a></li>
             </ul>
           </div>
           
           <div>
             <h4 className="text-lg font-bold mb-4">Контакты</h4>
             <ul className="space-y-2">
-              <li className="text-emerald-300">Москва, ул. Примерная, 123</li>
-              <li className="text-emerald-300">hello@flowerschoice.ru</li>
-              <li className="text-emerald-300">+7 (999) 123-45-67</li>
+              <li className="text-emerald-300">flowerschoice@gmail.com</li>
             </ul>
           </div>
         </div>
         
         <div className="border-t border-emerald-800 pt-8 text-center text-emerald-400">
-          <p>© 2024 Flowers'Choice. Московский институт электроники и математики им. А. Н. Тихонова</p>
-          <p className="mt-2 text-sm">Департамент компьютерной инженерии • Курс: Проектирование веб-приложений</p>
+          <p>© 2026 Flowers'Choice</p>
         </div>
       </div>
     </footer>
