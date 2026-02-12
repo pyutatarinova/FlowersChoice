@@ -9,6 +9,12 @@ const GROWTH_RATE_OPTIONS = [
   "Умеренный"
 ];
 
+const TOXICITY_OPTIONS = [
+  "Не токсичен",
+  "Умеренно",
+  "Токсичен"
+];
+
 const RatingsScreen = ({ favorites, setFavorites }) => {
   const PER_PAGE = 20;
 
@@ -17,10 +23,12 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
   const [temperatureFilter, setTemperatureFilter] = useState('');
   const [floweringMistingFilter, setFloweringMistingFilter] = useState('');
   const [growthRateFilter, setGrowthRateFilter] = useState('');
+  const [toxicityFilter, setToxicityFilter] = useState('');
 
   const [draftTemperature, setDraftTemperature] = useState('');
   const [draftFloweringMisting, setDraftFloweringMisting] = useState('');
   const [draftGrowthRate, setDraftGrowthRate] = useState('');
+  const [draftToxicity, setDraftToxicity] = useState('');
 
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [detailedPlantId, setDetailedPlantId] = useState(null);
@@ -65,6 +73,10 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
           params.set('growth_rate', growthRateFilter.trim());
         }
 
+        if (toxicityFilter.trim()) {
+          params.set('toxicity', toxicityFilter.trim());
+        }
+
         const response = await fetch(`http://127.0.0.1:3001/api/plants-rating/filter?${params.toString()}`);
         const data = await response.json();
 
@@ -81,7 +93,7 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
     };
 
     loadRatings();
-  }, [searchTerm, temperatureFilter, floweringMistingFilter, growthRateFilter]);
+  }, [searchTerm, temperatureFilter, floweringMistingFilter, growthRateFilter, toxicityFilter]);
 
   const totalFiltered = plants.length;
   const totalPages = Math.max(1, Math.ceil(totalFiltered / PER_PAGE));
@@ -94,7 +106,7 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, temperatureFilter, floweringMistingFilter, growthRateFilter]);
+  }, [searchTerm, temperatureFilter, floweringMistingFilter, growthRateFilter, toxicityFilter]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -158,6 +170,7 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
     setDraftTemperature(temperatureFilter);
     setDraftFloweringMisting(floweringMistingFilter);
     setDraftGrowthRate(growthRateFilter);
+    setDraftToxicity(toxicityFilter);
     setIsFiltersOpen(true);
   };
 
@@ -165,6 +178,7 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
     setTemperatureFilter(draftTemperature.trim());
     setFloweringMistingFilter(draftFloweringMisting);
     setGrowthRateFilter(draftGrowthRate);
+    setToxicityFilter(draftToxicity);
     setIsFiltersOpen(false);
   };
 
@@ -172,10 +186,12 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
     setDraftTemperature('');
     setDraftFloweringMisting('');
     setDraftGrowthRate('');
+    setDraftToxicity('');
 
     setTemperatureFilter('');
     setFloweringMistingFilter('');
     setGrowthRateFilter('');
+    setToxicityFilter('');
     setSearchTerm('');
 
     setIsFiltersOpen(false);
@@ -184,7 +200,8 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
   const hasActiveFilters =
     temperatureFilter.trim() !== '' ||
     floweringMistingFilter !== '' ||
-    growthRateFilter.trim() !== '';
+    growthRateFilter.trim() !== '' ||
+    toxicityFilter.trim() !== '';
 
   return (
     <div className="relative">
@@ -249,7 +266,7 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium text-emerald-800">Flowering misting</label>
+                <label className="text-sm font-medium text-emerald-800">Необходимость опрыскивания</label>
                 <select
                   value={draftFloweringMisting}
                   onChange={(e) => setDraftFloweringMisting(e.target.value)}
@@ -270,6 +287,20 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
                 >
                   <option value="">Не выбрано</option>
                   {GROWTH_RATE_OPTIONS.map((value) => (
+                    <option key={value} value={value}>{value}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-emerald-800">Токсичность</label>
+                <select
+                  value={draftToxicity}
+                  onChange={(e) => setDraftToxicity(e.target.value)}
+                  className="w-full p-3 border border-emerald-200 rounded-xl bg-white text-emerald-900 focus:ring-lime-500 focus:border-lime-500"
+                >
+                  <option value="">Не выбрано</option>
+                  {TOXICITY_OPTIONS.map((value) => (
                     <option key={value} value={value}>{value}</option>
                   ))}
                 </select>

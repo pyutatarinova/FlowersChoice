@@ -550,89 +550,174 @@ def user_my_plants(user_payload):
 # Search Similar Plants - ML
 # -----------------------------
 def _build_search_prompt(search_criteria: dict) -> str:
-    """Transform frontend search criteria into a text prompt for the ML model.
-    
-    Combines all text fields and tags from different categories into a single coherent prompt.
-    Handles two types of requests:
-    1. Personal use: location, care_regime, function, size_type, extra_notes
-    2. Gift: recipient, occasion, style, gift_location, extra_notes
-    """
-    parts = []
-    
-    # Detect if this is a gift request (has "recipient" or "occasion" fields)
-    is_gift = "recipient" in search_criteria or "occasion" in search_criteria
-    
-    if is_gift:
-        # Gift scenario
-        parts.append("for gift")
-        
-        if search_criteria.get("recipient"):
-            recipient = search_criteria["recipient"]
-            if recipient.get("text"):
-                parts.append(recipient["text"])
-            if recipient.get("tags"):
-                parts.extend(recipient["tags"])
-        
-        if search_criteria.get("occasion"):
-            occasion = search_criteria["occasion"]
-            if occasion.get("text"):
-                parts.append(occasion["text"])
-            if occasion.get("tags"):
-                parts.extend(occasion["tags"])
-        
-        if search_criteria.get("style"):
-            style = search_criteria["style"]
-            if style.get("text"):
-                parts.append(style["text"])
-            if style.get("tags"):
-                parts.extend(style["tags"])
-        
-        if search_criteria.get("gift_location"):
-            gift_loc = search_criteria["gift_location"]
-            if gift_loc.get("text"):
-                parts.append(gift_loc["text"])
-            if gift_loc.get("tags"):
-                parts.extend(gift_loc["tags"])
+    """Build a robust search query string from questionnaire payload."""
+    if not isinstance(search_criteria, dict):
+        return ""
+
+    def _clean_text(value: Any) -> str:
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            value = str(value)
+        return " ".join(value.replace("\n", " ").replace("\r", " ").strip().split())
+
+    def _humanize_tag(tag: Any) -> str:
+        text = _clean_text(tag).strip(" ,.;")
+        if not text:
+            return ""
+        normalized = text.lower().replace("-", "_").replace(" ", "_")
+        tag_map = {
+            "safe_for_pets": "safe for pets, non-toxic for cats and dogs",
+            "safe for pets": "safe for pets, non-toxic for cats and dogs",
+            "flowering": "flowering plant",
+            "colorful_leaves": "colorful foliage",
+            "colorful leaves": "colorful foliage",
+            "shade_tolerant": "tolerates low light or partial shade",
+            "long_lasting": "durable, long-living plant",
+            "bright_window": "bright light, near sunny window",
+            "light_room": "bright indirect light room",
+            "shade": "low light / shade",
+            "balcony": "balcony placement, often seasonal",
+            "bathroom": "high humidity placement, suitable for bathroom",
+            "high_care": "needs frequent care and watering",
+            "medium_care": "moderate care, regular weekly watering",
+            "low_care": "low maintenance, drought tolerant",
+            "high_humidity": "prefers high humidity",
+            "air_purifying": "air-purifying benefits",
+            "decorative": "strong decorative value",
+            "greenery": "lush greenery effect",
+            "photo_background": "visually expressive as photo background",
+            "large_floor": "large floor plant",
+            "hanging": "trailing / hanging growth habit",
+            "table_top": "compact tabletop size",
+            "any_size": "size is flexible",
+            "partner": "gift for partner, romantic tone",
+            "colleague": "gift for colleague, restrained style",
+            "family": "gift for family member, warm and caring tone",
+            "beginner": "recipient is beginner plant owner",
+            "expert": "recipient is experienced plant owner",
+            "birthday": "birthday or anniversary gift",
+            "romantic": "romantic occasion",
+            "care": "gratitude / support / care occasion",
+            "symbolic": "symbolic gift (new start, move, career)",
+            "expressive": "bright, unusual, expressive appearance",
+            "minimalist": "minimalist and calm green look",
+            "form_accent": "accent on leaf or trunk form",
+            "office_gift": "small plant suitable for desk",
+            "sunny_window": "sunny windowsill placement",
+            "office": "office environment suitability",
+            "living_area": "living room or kitchen placement",
+            "large_volume": "large plant volume",
+        }
+        mapped = tag_map.get(normalized)
+        if mapped:
+            return mapped
+        return text.replace("_", " ")
+
+    def _extract_text_and_tags(value: Any) -> Tuple[str, List[str]]:
+        if value is None:
+            return "", []
+        if isinstance(value, dict):
+            text = _clean_text(value.get("text"))
+            raw_tags = value.get("tags", [])
+        else:
+            text = _clean_text(value)
+            raw_tags = []
+
+        tags: List[str] = []
+        if isinstance(raw_tags, list):
+            for tag in raw_tags:
+                t = _humanize_tag(tag)
+                if t:
+                    tags.append(t)
+        elif isinstance(raw_tags, str):
+            for tag in raw_tags.split(","):
+                t = _humanize_tag(tag)
+                if t:
+                    tags.append(t)
+        return text, tags
+
+    def _dedupe_keep_order(values: List[str]) -> List[str]:
+        seen = set()
+        result: List[str] = []
+        for item in values:
+            cleaned = _clean_text(item)
+            if not cleaned:
+                continue
+            key = cleaned.lower()
+            if key in seen:
+                continue
+            seen.add(key)
+            result.append(cleaned)
+        return result
+
+    has_gift_answers = any(
+        search_criteria.get(k) for k in ("recipient", "occasion", "style", "gift_location")
+    )
+    scenario = "gift" if has_gift_answers else "personal"
+
+    if scenario == "gift":
+        field_order = [
+            ("recipient", "recipient profile"),
+            ("occasion", "gift occasion"),
+            ("style", "visual style"),
+            ("gift_location", "future location"),
+            ("extra_notes", "extra constraints"),
+        ]
+        scenario_text = "gift recommendation"
     else:
-        # Personal use scenario
-        parts.append("for personal use")
-        
-        if search_criteria.get("location"):
-            loc = search_criteria["location"]
-            if loc.get("text"):
-                parts.append(loc["text"])
-            if loc.get("tags"):
-                parts.extend(loc["tags"])
-        
-        if search_criteria.get("care_regime"):
-            care = search_criteria["care_regime"]
-            if care.get("text"):
-                parts.append(care["text"])
-            if care.get("tags"):
-                parts.extend(care["tags"])
-        
-        if search_criteria.get("function"):
-            func = search_criteria["function"]
-            if func.get("text"):
-                parts.append(func["text"])
-            if func.get("tags"):
-                parts.extend(func["tags"])
-        
-        if search_criteria.get("size_type"):
-            size = search_criteria["size_type"]
-            if size.get("text"):
-                parts.append(size["text"])
-            if size.get("tags"):
-                parts.extend(size["tags"])
-    
-    if search_criteria.get("extra_notes"):
-        extra = search_criteria["extra_notes"]
-        if extra.get("text"):
-            parts.append(extra["text"])
-        if extra.get("tags"):
-            parts.extend(extra["tags"])
-    
-    return ", ".join(filter(None, parts))
+        field_order = [
+            ("location", "placement and light"),
+            ("care_regime", "care effort"),
+            ("function", "purpose"),
+            ("size_type", "size and growth form"),
+            ("extra_notes", "extra constraints"),
+        ]
+        scenario_text = "personal plant selection"
+
+    structured_blocks: List[str] = []
+    all_texts: List[str] = []
+    all_tags: List[str] = []
+
+    for key, label in field_order:
+        text, tags = _extract_text_and_tags(search_criteria.get(key))
+        all_texts.extend([text] if text else [])
+        all_tags.extend(tags)
+        if text or tags:
+            block_parts: List[str] = []
+            if text:
+                block_parts.append(f"text: {text}")
+            if tags:
+                block_parts.append(f"tags: {', '.join(_dedupe_keep_order(tags))}")
+            structured_blocks.append(f"{label}: " + "; ".join(block_parts))
+
+    all_texts = _dedupe_keep_order(all_texts)
+    all_tags = _dedupe_keep_order(all_tags)
+
+    if not structured_blocks and not all_texts and not all_tags:
+        return ""
+
+    summary_bits: List[str] = []
+    if all_texts:
+        summary_bits.append("user intent: " + " | ".join(all_texts))
+    if all_tags:
+        summary_bits.append("key preferences: " + ", ".join(all_tags))
+
+    priority_fields = (
+        "light_requirements, watering_frequency, maintenance_level, humidity_preference, "
+        "mature_size, growth_rate, toxicity, flowering, fragrance, health_benefits, brief_description"
+    )
+
+    prompt_parts = [
+        "query: find the most relevant indoor plants in database",
+        f"search type: {scenario_text}",
+        f"priority plant fields: {priority_fields}",
+    ]
+    if summary_bits:
+        prompt_parts.append(" | ".join(summary_bits))
+    prompt_parts.extend(structured_blocks)
+
+    return ". ".join(_dedupe_keep_order(prompt_parts))
 
 
 def _format_plant_response(plant_data: dict) -> dict:
@@ -1108,6 +1193,10 @@ def plants_rating_filter():
       - name: flowering_misting
         in: query
         type: boolean
+      - name: toxicity
+        in: query
+        type: string
+        enum: [Не токсичен, Умеренно, Токсичен]
     responses:
       200:
         description: Success
@@ -1137,6 +1226,7 @@ def plants_rating_filter():
         growth_rate = request.args.get('growth_rate', default=None, type=str)
         comfort_temp_raw = request.args.get('comfort_temp', default=None, type=str)
         flowering_misting_raw = request.args.get('flowering_misting', default=None, type=str)
+        toxicity = request.args.get('toxicity', default=None, type=str)
 
         if page < 1:
             page = 1
@@ -1163,6 +1253,7 @@ def plants_rating_filter():
             comfort_temp=comfort_temp,
             flowering_misting=flowering_misting,
             growth_rate=growth_rate,
+            toxicity=toxicity,
         )
 
         total_count = len(all_plants)

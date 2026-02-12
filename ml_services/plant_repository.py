@@ -400,6 +400,7 @@ class PlantRepository:
         comfort_temp: float | None = None,
         flowering_misting: bool | None = None,
         growth_rate: str | None = None,
+        toxicity: str | None = None,
     ) -> List[Dict[str, Any]]:
         """Get plants rating with server-side filters.
 
@@ -408,6 +409,7 @@ class PlantRepository:
         - comfort_temp: a single numeric value must fall into plant comfort_temp range
         - flowering_misting: boolean filter
         - growth_rate: exact match (case-insensitive)
+        - toxicity: one of 'Не токсичен', 'Умеренно', 'Токсичен'
         """
         where_clauses: List[str] = []
         params: List[Any] = []
@@ -443,6 +445,11 @@ class PlantRepository:
         if growth_rate:
             where_clauses.append("LOWER(TRIM(COALESCE(p.features->>'growth_rate', ''))) = LOWER(TRIM(%s))")
             params.append(growth_rate.strip())
+
+        if toxicity:
+            toxicity_clause, toxicity_params = self._get_toxicity_filter_clause_with_params(toxicity)
+            where_clauses.append(toxicity_clause)
+            params.extend(toxicity_params)
 
         where_sql = ""
         if where_clauses:
@@ -483,3 +490,63 @@ class PlantRepository:
             })
 
         return results
+
+    def _get_toxicity_filter_clause_with_params(self, toxicity: str) -> Tuple[str, List[Any]]:
+        """Get SQL WHERE clause and parameters for toxicity filtering.
+        
+        Maps Russian toxicity categories to patterns in the database.
+        Returns a tuple of (clause_string, params_list)
+        """
+        toxicity = toxicity.strip().lower()
+        
+        if toxicity == 'не токсичен':
+            # Non-toxic patterns - use ILIKE for case-insensitive matching
+            patterns = [
+                '%в целом не токсичен%',
+                '%нетоксичен для человека%',
+                '%нетоксично%',
+                '%обычно считается нетоксичным%',
+                '%нетоксичны%',
+                '%не токсичен%',
+            ]
+            clause_parts = ["LOWER(COALESCE(p.features->>'toxicity', '')) LIKE %s"] * len(patterns)
+            clause = f"({' OR '.join(clause_parts)})"
+            return clause, patterns
+            
+        elif toxicity == 'умеренно':
+            # Moderately toxic patterns
+            patterns = [
+                '%может быть слегка токсичным%',
+                '%умеренно токсич%',
+                '%некоторые виды токсичны или умеренно%',
+            ]
+            clause_parts = ["LOWER(COALESCE(p.features->>'toxicity', '')) LIKE %s"] * len(patterns)
+            clause = f"({' OR '.join(clause_parts)})"
+            return clause, patterns
+            
+        elif toxicity == 'токсичен':
+            # Toxic patterns
+            toxic_patterns = [
+                '%токсичен для домашних%',
+                '%токсично для домашних%',
+            ]
+            # Should not match moderate or non-toxic
+            not_patterns = [
+                '%может быть слегка%',
+                '%умеренно%',
+                '%не токсичен%',
+                '%нетоксичен%',
+                '%нетоксично%',
+            ]
+            
+            toxic_clause_parts = ["LOWER(COALESCE(p.features->>'toxicity', '')) LIKE %s"] * len(toxic_patterns)
+            toxic_clause = f"({' OR '.join(toxic_clause_parts)})"
+            
+            not_clause_parts = ["LOWER(COALESCE(p.features->>'toxicity', '')) NOT LIKE %s"] * len(not_patterns)
+            not_clause = f"({' AND '.join(not_clause_parts)})"
+            
+            clause = f"{toxic_clause} AND {not_clause}"
+            return clause, toxic_patterns + not_patterns
+        
+        # Default: no filter
+        return "1=1", []
