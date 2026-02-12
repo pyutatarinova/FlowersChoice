@@ -110,7 +110,7 @@ const App = () => {
         size: plant.mature_size
       },
       notes: '',
-      rating: 5,
+      rating: 0,
       wateringSchedule: 7,
       wateringHistory: [new Date()],
       addedAt: new Date()
@@ -122,6 +122,31 @@ const App = () => {
 
   const updatePlant = useCallback(async (docId, data) => {
     setMyPlants(prev => prev.map(p => p.id === docId ? { ...p, ...data } : p));
+
+    if (Object.prototype.hasOwnProperty.call(data, 'rating')) {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      try {
+        const response = await fetch('http://localhost:3001/api/update-plant-score', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            plant_id: docId,
+            score: data.rating
+          })
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+      } catch (e) {
+        console.error('Ошибка обновления оценки растения:', e);
+      }
+    }
   }, []);
 
   const removePlant = useCallback(async (docId) => {
@@ -333,7 +358,7 @@ const App = () => {
                     size: plant.mature_size
                   },
                   notes: '',
-                  rating: 5,
+                  rating: Number.isFinite(Number(plant.score)) ? Number(plant.score) : 0,
                   wateringSchedule: 7,
                   wateringHistory: [new Date()],
                   addedAt: new Date()
@@ -393,7 +418,7 @@ const App = () => {
                     size: plant.mature_size
                   },
                   notes: '',
-                  rating: 5,
+                  rating: Number.isFinite(Number(plant.score)) ? Number(plant.score) : 0,
                   wateringSchedule: 7,
                   wateringHistory: [new Date()],
                   addedAt: new Date()

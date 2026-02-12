@@ -398,7 +398,10 @@ def save_favourites(user_payload):
     if not data or "plant_id" not in data:
         return jsonify({"success": False, "message": "Ожидался plant_id"}), 400
 
-    plant_id = data["plant_id"]
+    try:
+        plant_id = int(data["plant_id"])
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "message": "plant_id должен быть целым числом"}), 400
 
     try:
         repo = PlantRepository()
@@ -664,6 +667,7 @@ def _format_plant_response(plant_data: dict) -> dict:
     # Add primary fields (ensure they override feature keys)
     merged['id'] = plant_data.get('id')
     merged['plant_name'] = plant_data.get('name')
+    merged['score'] = plant_data.get('score', 0.0) if plant_data.get('score') is not None else 0.0
     
     return merged
 
@@ -948,6 +952,9 @@ def update_plant_score(user_payload):
     except (ValueError, TypeError):
         return jsonify({"success": False, "message": "score должен быть числовым значением"}), 400
     
+    if score < 0 or score > 5:
+        return jsonify({"success": False, "message": "score должен быть в диапазоне от 0 до 5"}), 400
+    
     try:
         repo = PlantRepository()
         repo.update_plant_score(user_id, plant_id, score)
@@ -1083,4 +1090,4 @@ def plants_rating():
 # Start server
 # -----------------------------
 if __name__ == '__main__':
-    app.run(port=PORT)
+    app.run(host='0.0.0.0', port=PORT)
