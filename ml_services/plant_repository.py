@@ -27,11 +27,11 @@ load_dotenv('.env')
 
 
 def _get_dsn() -> str:
-    host = os.getenv("DB_HOST") or "localhost"
-    port = int(os.getenv("DB_PORT"))
-    dbname = os.getenv("DB_NAME")
-    user = os.getenv("DB_USER")
-    password = os.getenv("DB_PASS")
+    host = "db"
+    port = "5432"
+    dbname = "flowersdb"
+    user = "postgres"
+    password = "postgres"
 
     return f"host={host} port={port} dbname={dbname} user={user} password={password}"
 
@@ -243,7 +243,7 @@ class PlantRepository:
         with self._get_connection() as conn:
             with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
                 cur.execute(f"""
-                    SELECT p.id, p.name, p.features
+                    SELECT p.id, p.name, p.features, up.score
                     FROM user_plants up
                     JOIN plants p ON p.id = up.plant_id
                     WHERE up.user_id = %s AND up.{flag_column} = TRUE
@@ -257,6 +257,7 @@ class PlantRepository:
                         "id": int(r['id']),
                         "name": r.get('name'),
                         "features": r.get('features'),
+                        "score": float(r.get('score')) if r.get('score') is not None else 0.0,
                     }
                     results.append(plant)
                 
