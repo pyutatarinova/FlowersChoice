@@ -1,5 +1,5 @@
 # Runtime volumes
-postges_data/
+postgres_data/
 minio_data/
 DB/postgres_data/
 minio/minio_data/
@@ -13,7 +13,7 @@ frontend/node_modules/
 **/__pycache__/
 **/*.pyc
 **/venv
-
+**/ml_venv
 # Env
 .env
 DB/.env

@@ -28,4 +28,3 @@ RUN chmod +x entrypoint.sh
 WORKDIR /app/backend
 
 CMD ["../entrypoint.sh"]
-

@@ -3,3 +3,4 @@
 **/*.pyc
 **/.git
 **/.env
+**/ml_venv

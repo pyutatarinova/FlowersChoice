@@ -27,11 +27,11 @@ load_dotenv('.env')
 
 
 def _get_dsn() -> str:
-    host = "db"
-    port = "5432"
-    dbname = "flowersdb"
-    user = "postgres"
-    password = "postgres"
+    host = os.getenv("DB_HOST", "db")
+    port = os.getenv("DB_PORT", "5432")
+    dbname = os.getenv("DB_NAME", "flowersdb")
+    user = os.getenv("DB_USER", "postgres")
+    password = os.getenv("DB_PASSWORD", "postgres")
 
     return f"host={host} port={port} dbname={dbname} user={user} password={password}"
 
