@@ -1,5 +1,6 @@
 ﻿import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
+import LandingPage from './LendingPage';
 
 // header
 import Header from './components/header/Header';
@@ -68,7 +69,7 @@ const getWateringStatus = (wateringHistory, wateringScheduleDays) => {
 
 // --- Главный компонент App ---
 const App = () => {
-  const [appState, setAppState] = useState('home');
+  const [appState, setAppState] = useState('landing');
   const [mode, setMode] = useState(null);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
@@ -113,7 +114,7 @@ const App = () => {
         size: plant.mature_size
       },
       notes: '',
-      rating: 5,
+      rating: 0,
       wateringSchedule: 7,
       wateringHistory: [new Date()],
       addedAt: new Date()
@@ -125,6 +126,31 @@ const App = () => {
 
   const updatePlant = useCallback(async (docId, data) => {
     setMyPlants(prev => prev.map(p => p.id === docId ? { ...p, ...data } : p));
+
+    if (Object.prototype.hasOwnProperty.call(data, 'rating')) {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      try {
+        const response = await fetch('http://localhost:3001/api/update-plant-score', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            plant_id: docId,
+            score: data.rating
+          })
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+      } catch (e) {
+        console.error('Ошибка обновления оценки растения:', e);
+      }
+    }
   }, []);
 
   const removePlant = useCallback(async (docId) => {
@@ -155,6 +181,64 @@ const App = () => {
   const updateUserProfile = useCallback(async (data) => {
     setUserProfile(prev => ({ ...prev, ...data }));
   }, []);
+
+  const transformMyPlants = useCallback((plants = []) => {
+    return plants.map(plant => ({
+      id: plant.id,
+      originalId: plant.id,
+      name: plant.plant_name,
+      latin: plant.plant_name,
+      image: plant.photo,
+      details: plant.brief_description,
+      traits: {
+        light: plant.light_requirements,
+        water: plant.watering_frequency,
+        temp: plant.comfort_temp,
+        size: plant.mature_size
+      },
+      notes: '',
+      rating: 5,
+      wateringSchedule: 7,
+      wateringHistory: [new Date()],
+      addedAt: new Date()
+    }));
+  }, []);
+
+  const loadUserPlantsData = useCallback(async (token) => {
+    if (!token) {
+      setFavorites([]);
+      setMyPlants([]);
+      return;
+    }
+
+    try {
+      const favRes = await fetch('http://localhost:3001/api/userplants', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (favRes.status === 401) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('userProfile');
+        setFavorites([]);
+        setMyPlants([]);
+        setUserProfile({});
+        return;
+      }
+
+      const favData = await favRes.json();
+      if (favData.success) {
+        setFavorites(Array.isArray(favData.favorite) ? favData.favorite : []);
+        setMyPlants(transformMyPlants(Array.isArray(favData.my_plant) ? favData.my_plant : []));
+      } else {
+        setFavorites([]);
+        setMyPlants([]);
+      }
+    } catch (e) {
+      console.error('Ошибка получения растений пользователя:', e);
+      setFavorites([]);
+      setMyPlants([]);
+    }
+  }, [transformMyPlants]);
 
   // --- NAVIGATION & UTILS ---
   const currentQuestions = useMemo(() => mode ? QUESTIONS[mode] : [], [mode]);
@@ -220,11 +304,36 @@ const App = () => {
   
   useEffect(() => { window.AppFunctions = { addToMyPlants }; }, [addToMyPlants]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setFavorites([]);
+      setMyPlants([]);
+      return;
+    }
+    loadUserPlantsData(token);
+  }, [loadUserPlantsData]);
+
 
   // --- RENDER CONTENT ---
   const renderContent = () => {
 
     switch (appState) {
+      case 'landing': return (
+        <LandingPage
+          onStartSelection={(selectedMode) => {
+            if (selectedMode === 'self' || selectedMode === 'gift') {
+              selectMode(selectedMode);
+              return;
+            }
+            navigate('home');
+          }}
+          onShowAuth={(type) => {
+            if (type === 'login') setShowLoginWidget(true);
+            else setShowAuthWidget(true);
+          }}
+        />
+      );
       case 'home': return (
           <div className="p-6 bg-white rounded-2xl shadow-xl">
               <h2 className="text-3xl font-bold text-emerald-800 mb-4 text-center">Flowers'Choice: Подберите свой идеальный цветок</h2>
@@ -268,7 +377,10 @@ const App = () => {
           else setShowAuthWidget(true);
         }}
         onLogout={() => {
+          localStorage.removeItem('authToken');
           localStorage.removeItem('userProfile');
+          setFavorites([]);
+          setMyPlants([]);
           setUserProfile({});
           setAppState('home');
         }}
@@ -281,10 +393,14 @@ const App = () => {
   return (
     <div className="min-h-screen bg-emerald-50 flex flex-col font-sans antialiased">
       <Header favoritesCount={favorites.length} myPlantsCount={myPlants.length} onNavigate={navigate} userId={userId} userName={userProfile?.name || ''} />
-      <main className="flex-grow p-4 sm:p-8 max-w-4xl w-full mx-auto">
-        <div className="w-full h-full flex flex-col justify-center py-8">
-          {renderContent()}
-        </div>
+      <main className={appState === 'landing' ? 'flex-grow' : 'flex-grow p-4 sm:p-8 max-w-4xl w-full mx-auto'}>
+        {appState === 'landing' ? (
+          renderContent()
+        ) : (
+          <div className="w-full h-full flex flex-col justify-center py-8">
+            {renderContent()}
+          </div>
+        )}
       </main>
       {/* Модальное окно регистрации */}
       {showAuthWidget && (
@@ -342,13 +458,14 @@ const App = () => {
                     size: plant.mature_size
                   },
                   notes: '',
-                  rating: 5,
+                  rating: Number.isFinite(Number(plant.score)) ? Number(plant.score) : 0,
                   wateringSchedule: 7,
                   wateringHistory: [new Date()],
                   addedAt: new Date()
                 }));
                 setMyPlants(transformedMyPlants);
               }
+              await loadUserPlantsData(token);
             } catch (e) {
               console.error('Ошибка получения профиля или избранных:', e);
             }
@@ -402,13 +519,14 @@ const App = () => {
                     size: plant.mature_size
                   },
                   notes: '',
-                  rating: 5,
+                  rating: Number.isFinite(Number(plant.score)) ? Number(plant.score) : 0,
                   wateringSchedule: 7,
                   wateringHistory: [new Date()],
                   addedAt: new Date()
                 }));
                 setMyPlants(transformedMyPlants);
               }
+              await loadUserPlantsData(token);
             } catch (e) {
               console.error('Ошибка получения профиля или избранных:', e);
             }
@@ -417,9 +535,11 @@ const App = () => {
           }}
         />
       )}
-      <div className="p-4 text-center text-xs text-gray-400">
-          {userId && `Текущий ID пользователя: ${userId}`}
-      </div>
+      {userId && (
+        <div className="p-4 text-center text-xs text-gray-400">
+          {`Текущий ID пользователя: ${userId}`}
+        </div>
+      )}
     </div>
   );
 };
