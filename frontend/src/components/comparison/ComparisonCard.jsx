@@ -9,7 +9,7 @@ const ComparisonCard = ({ plant, isLeft, onSelect }) => (
     <img
       src={plant.photo}
       alt={plant.plant_name}
-      className="w-36 h-36 object-cover rounded-xl mb-4 shadow-md"
+      className="w-36 h-36 object-cover rounded-xl mb-4 shadow-md mx-auto"
     />
 
     <h3 className="text-2xl font-bold text-emerald-800 mb-2">{plant.plant_name}</h3>

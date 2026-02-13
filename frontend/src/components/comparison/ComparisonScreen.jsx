@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
-import { mockResults } from '../../constants/mockResults';
 import ComparisonCard from '../../components/comparison/ComparisonCard';
 
 
@@ -17,7 +16,7 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
         const remainingPlants = comparisonList.filter(p => p.id !== loserPlant.id);
         
         if (remainingPlants.length === 1) {
-            setWinner(chosenPlant.id);
+            setWinner(chosenPlant);
         } else {
             setComparisonList(remainingPlants); 
             const nextPlantInQueue = selectedPlants[nextIndex];
@@ -26,13 +25,13 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
                 else setLeftPlant(nextPlantInQueue);
                 setNextIndex(prev => prev + 1);
             } else {
-                setWinner(chosenPlant.id); 
+                setWinner(chosenPlant); 
             }
         }
     };
     
     if (winner) {
-        const finalWinner = mockResults.find(p => p.id === winner);
+        const finalWinner = winner;
 
     if (!finalWinner) {
         return <div className="p-8 text-center text-red-500">Ошибка: победитель не найден</div>;
