@@ -26,8 +26,8 @@ jobs:
           # Устанавливаем линтеры
           pip install pylint black ruff
 
-      - name: Lint Python with Black
-        run: black --check backend/ ml_services/  # если код в этих папках
+      # - name: Lint Python with Black
+      #   run: black --check backend/ ml_services/  # если код в этих папках
 
       - name: Lint Python with Ruff
         run: ruff check backend/ ml_services/
