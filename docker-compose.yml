@@ -42,7 +42,9 @@ services:
   # Backend + ML
   # -----------------------
   backend:
-    image: flowerschoice-backend-slim:latest
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: plants_backend
     depends_on:
       - db
