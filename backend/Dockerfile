@@ -11,8 +11,8 @@ RUN apt-get update && apt-get install -y \
 
 # requirements
 COPY backend/requirements.txt .
+RUN pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.9.1
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install boto3
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-base')"
 
 
