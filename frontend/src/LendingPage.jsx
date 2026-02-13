@@ -234,7 +234,7 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
             activeBlossoms.includes(2) ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10'
           }`}>
             <h2 className="text-4xl font-bold text-emerald-900 mb-6">
-              Поможем <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-lime-500">ухаживать</span>
+              Помощь <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-lime-500">в уходе</span>
             </h2>
             <p className="text-xl text-emerald-600 mb-8">
               Мы не просто подбираем растения — мы помогаем им процветать в вашем доме
@@ -245,17 +245,12 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
                 {
                   icon: <Calendar className="w-8 h-8" />,
                   title: "Умный календарь полива",
-                  description: "Автоматические напоминания о поливе с учётом сезона и условий вашего дома"
+                  description: "Автоматические напоминания о поливе с заданной частотой"
                 },
                 {
                   icon: <Droplets className="w-8 h-8" />,
                   title: "Персональные рекомендации",
-                  description: "Советы по уходу на основе состояния вашего растения и условий окружающей среды"
-                },
-                {
-                  icon: <MessageCircle className="w-8 h-8" />,
-                  title: "Поддержка 24/7",
-                  description: "Ответы на любые вопросы по уходу от нашего сообщества и экспертов"
+                  description: "Советы по уходу за вашим идеальным растением"
                 }
               ].map((feature, i) => (
                 <div key={i} className="flex items-start space-x-4 group">
@@ -340,7 +335,7 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
               icon: <User className="w-16 h-16" />,
               title: "Для себя",
               description: "Подберите идеальное растение для вашего дома, офиса или квартиры",
-              features: ["Персональные рекомендации", "Учёт ваших условий", "Постоянная поддержка"],
+              features: ["Персональные рекомендации", "Учёт ваших условий"],
               color: "from-emerald-600 to-emerald-700",
               buttonText: "Выбрать для себя"
             },
@@ -349,7 +344,7 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
               icon: <Gift className="w-16 h-16" />,
               title: "В подарок",
               description: "Найдите идеальный подарок для близких, коллег или друзей",
-              features: ["Готовые подарочные наборы", "Персонализация", "Сертификаты ухода"],
+              features: ["Персонализация", "Топ-100 растений"],
               color: "from-lime-600 to-lime-700",
               buttonText: "Выбрать подарок"
             }
@@ -419,7 +414,7 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
             Наши <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-600 to-lime-500">преимущества</span>
           </h2>
           <p className="text-xl text-emerald-600 max-w-3xl mx-auto">
-            Почему тысячи людей доверяют нам выбор своих растений
+            Почему нам стоит доверить выбор своих растений
           </p>
         </div>
         
@@ -433,20 +428,20 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
             },
             {
               icon: <Shield className="w-10 h-10" />,
-              title: "Гарантия совместимости",
-              description: "98% наших клиентов остаются довольны выбранным растением благодаря точному алгоритму",
+              title: "Гарантия успеха",
+              description: "Наш сервис позволит окунуться в уход за своим идеальным растением без страха",
               color: "from-blue-500 to-cyan-500"
             },
             {
               icon: <Award className="w-10 h-10" />,
               title: "Экспертный подход",
-              description: "Наши рекомендации основаны на знаниях биологов, дизайнеров и опытных садоводов",
+              description: "Наши рекомендации основаны на знаниях биологов и опытных садоводов",
               color: "from-amber-500 to-orange-500"
             },
             {
               icon: <Palette className="w-10 h-10" />,
-              title: "Дизайн-решения",
-              description: "Учитываем не только потребности растения, но и эстетику вашего интерьера",
+              title: "Персональные решения",
+              description: "Учитывыем и совмещаем все ваши потребности и уникальные особенности домашних растений",
               color: "from-emerald-500 to-green-500"
             }
           ].map((advantage, index) => (
@@ -498,20 +493,12 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
               answer: "Наш ИИ анализирует более 50 параметров: освещённость, влажность, температуру в помещении, ваши привычки по уходу, наличие детей и животных, а также эстетические предпочтения."
             },
             {
-              question: "Что делать, если растение не прижилось?",
-              answer: "Мы предоставляем 30-дневную гарантию на все подобранные растения. Если возникли проблемы, наши эксперты помогут с диагностикой или предложат замену."
+              question: "Что делать, если мне не нравится ИИ-подборка?",
+              answer: "В качестве альтернативы мы предоставляем возможность ручного выбора, где можно самостоятельно сравнить растения и подобрать свой идеальный!"
             },
             {
               question: "Можно ли доверить выбор подарка вашему сервису?",
               answer: "Да! У нас есть специальный режим 'Подарок', где мы учитываем характер получателя, повод и даже символическое значение разных растений."
-            },
-            {
-              question: "Как часто нужно обновлять информацию о растениях?",
-              answer: "Наша система автоматически отслеживает изменения условий (сезонность, переезды) и предлагает корректировки ухода. Вы также можете вручную обновлять информацию в любое время."
-            },
-            {
-              question: "Есть ли мобильное приложение?",
-              answer: "Да! Наше приложение доступно для iOS и Android. Оно включает все функции веб-версии плюс push-уведомления о поливе и фотодиагностику растений."
             }
           ].map((item, index) => (
             <div
@@ -592,7 +579,7 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-6 mt-16">
           {[
             { number: "95%", label: "Успешных подборов" },
-            { number: "24/7", label: "Поддержка" },
+            { number: "1000+", label: "Растений в базе" },
             { number: "∞", label: "Зелёных возможностей" }
           ].map((stat, i) => (
             <div key={i} className="text-center group">
@@ -625,18 +612,14 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
             <ul className="space-y-2">
               <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Главная</a></li>
               <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">О нас</a></li>
-              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Избранные</a></li>
-              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Контакты</a></li>
-            </ul>
+              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Избранные</a></li>            </ul>
           </div>
           
           <div>
             <h4 className="text-lg font-bold mb-4">Ресурсы</h4>
             <ul className="space-y-2">
               <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Рейтинг растений</a></li>
-              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Подбор растений</a></li>
-              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Сообщество</a></li>
-            </ul>
+              <li><a href="#" className="text-emerald-300 hover:text-white transition-colors">Подбор растений</a></li>            </ul>
           </div>
           
           <div>

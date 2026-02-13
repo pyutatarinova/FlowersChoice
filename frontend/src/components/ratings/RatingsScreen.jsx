@@ -359,7 +359,7 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
       {!isLoading && !error && totalFiltered > PER_PAGE && (
         <div className="mt-8 bg-white border border-emerald-100 rounded-2xl shadow-md p-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <p className="text-sm text-emerald-700">Показано {paginatedPlants.length} из {totalFiltered} растений</p>
+            {/* <p className="text-sm text-emerald-700">Показано {paginatedPlants.length} из {totalFiltered} растений</p> */}
 
             <div className="flex items-center justify-center gap-2 flex-wrap">
               <button
