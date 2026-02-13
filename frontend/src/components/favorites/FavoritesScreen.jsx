@@ -38,7 +38,7 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate }) => {
 
     try {
     if (token) {
-      await fetch('http://localhost:3001/api/set-plant-flag', {
+      await fetch('http://localhost:3001/api/remove-plant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
