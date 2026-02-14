@@ -1,36 +1,3 @@
 [tool.black]
 line-length = 120
-target-version = ['py312']  # укажите вашу версию Python
-include = '\.pyi?$'
-extend-exclude = '''
-/(
-    \.eggs
-  | \.git
-  | \.hg
-  | \.mypy_cache
-  | \.tox
-  | \.venv
-  | _build
-  | buck-out
-  | build
-  | dist
-)/
-'''
-
-[tool.ruff]
-target-version = "py312"
-line-length = 120
-select = ["E", "F", "W", "C", "I"]  # основные категории ошибок
-ignore = [
-    "E501",   # line too long (проверяется Black)
-    "F401",   # unused import (иногда полезно, можно оставить)
-]
-exclude = [
-    ".git",
-    "__pycache__",
-    "build",
-    "dist",
-    "venv",
-    "env",
-    "migrations",
-]
+target-version = ['py312']
