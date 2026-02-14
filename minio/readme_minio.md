@@ -1,1 +1,0 @@
-Запустить docker docker-compose up -d

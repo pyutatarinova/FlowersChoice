@@ -47,7 +47,7 @@ with open(sql_file, "a", encoding="utf-8") as f:
         features_json_sql = features_json.replace("'", "''")
 
         sql = (
-            f"INSERT INTO plants (plant_id, name, features) VALUES (\n"
+            f"INSERT INTO plants (id, name, features) VALUES (\n"
             f"    {plant_id},\n"
             f"    '{plant_name}',\n"
             f"    '{features_json_sql}'::jsonb\n"

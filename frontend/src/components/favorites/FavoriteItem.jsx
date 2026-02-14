@@ -1,3 +1,7 @@
+import React from 'react';
+import { Plus, Minus, ChevronRight, X } from 'lucide-react';
+
+
 const FavoriteItem = ({ plant, onRemove, onToggleDetails, isDetailed, onToggleSelect, isSelected, onAddToMyPlants }) => {
   return (
     <div className="bg-white rounded-xl shadow-lg border border-emerald-100 mb-4 overflow-hidden">

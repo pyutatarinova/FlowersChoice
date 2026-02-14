@@ -1,10 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
-import { mockResults } from '../../constants/mockResults';
 import ComparisonCard from '../../components/comparison/ComparisonCard';
 
 
-const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants }) => {
+const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants, onRequireAuth }) => {
     const [comparisonList, setComparisonList] = useState(selectedPlants);
     const [winner, setWinner] = useState(null);
     
@@ -12,12 +11,12 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
     const [rightPlant, setRightPlant] = useState(selectedPlants.length > 1 ? selectedPlants[1] : null);
     const [nextIndex, setNextIndex] = useState(2);
 
-    const handleChoice = (chosenPlant) => {
+    const handleChoice = useCallback((chosenPlant) => {
         const loserPlant = chosenPlant.id === leftPlant.id ? rightPlant : leftPlant;
         const remainingPlants = comparisonList.filter(p => p.id !== loserPlant.id);
         
         if (remainingPlants.length === 1) {
-            setWinner(chosenPlant.id);
+            setWinner(chosenPlant);
         } else {
             setComparisonList(remainingPlants); 
             const nextPlantInQueue = selectedPlants[nextIndex];
@@ -26,13 +25,62 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
                 else setLeftPlant(nextPlantInQueue);
                 setNextIndex(prev => prev + 1);
             } else {
-                setWinner(chosenPlant.id); 
+                setWinner(chosenPlant); 
             }
+        }
+    }, [leftPlant, rightPlant, comparisonList, selectedPlants, nextIndex]);
+
+    // Добавляем обработку горячих клавиш
+    React.useEffect(() => {
+        if (winner) return; // Отключаем горячие клавиши после выбора победителя
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                handleChoice(leftPlant);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                handleChoice(rightPlant);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [winner, leftPlant, rightPlant, handleChoice]);
+
+    const handleAddWinnerToMyPlants = async (plant) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                if (onRequireAuth) onRequireAuth();
+                return;
+            }
+
+            if (onAddToMyPlants) onAddToMyPlants(plant);
+
+            const response = await fetch('http://localhost:3001/api/add-my-plant', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    plant_id: plant.id
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${response.status}`);
+            }
+            
+        } catch (error) {
+            console.error('Error adding winner to my plants:', error);
         }
     };
     
     if (winner) {
-        const finalWinner = mockResults.find(p => p.id === winner);
+        const finalWinner = winner;
 
     if (!finalWinner) {
         return <div className="p-8 text-center text-red-500">Ошибка: победитель не найден</div>;
@@ -68,7 +116,7 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
             </div>
 
             <button
-                onClick={() => { onAddToMyPlants(finalWinner); onFinishComparison(); }}
+                onClick={() => { handleAddWinnerToMyPlants(finalWinner); onFinishComparison(); }}
                 className="w-full py-3 px-6 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition"
             >
                 Добавить в Мои растения

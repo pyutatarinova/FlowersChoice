@@ -1,10 +1,10 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 
 const Header = ({ favoritesCount, myPlantsCount, onNavigate, userId, userName }) => (
-  <header className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm shadow-md border-b border-emerald-100 p-4">
+  <header className="sticky top-0 z-[1000] bg-white/95 backdrop-blur-sm shadow-md border-b border-emerald-100 p-4">
     <div className="max-w-4xl mx-auto flex justify-between items-center">
-      <h1 className="text-2xl font-bold text-emerald-700 tracking-tight flex items-center cursor-pointer" onClick={() => onNavigate('home')}>
+      <h1 className="text-2xl font-bold text-emerald-700 tracking-tight flex items-center cursor-pointer" onClick={() => onNavigate('landing')}>
         <Leaf className="w-6 h-6 mr-2 text-lime-500" />
         Flowers'Choice
       </h1>

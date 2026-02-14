@@ -1,0 +1,52 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ----- Python (backend + ml_services) -----
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'  # укажите вашу версию
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          # Устанавливаем линтеры
+          pip install pylint black ruff
+
+      # - name: Lint Python with Black
+      #   run: black --check backend/ ml_services/  # если код в этих папках
+
+      - name: Lint Python with Ruff
+        run: ruff check backend/ ml_services/
+
+      - name: Lint Python with Pylint
+        run: pylint backend/ ml_services/  # может потребоваться донастройка
+
+      # ----- JavaScript / Frontend -----
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'  # укажите вашу версию
+
+      # Если фронтенд лежит в отдельной папке frontend со своим package.json
+      - name: Install frontend dependencies
+        working-directory: ./frontend   # если фронтенд в папке frontend
+        run: npm ci
+
+      - name: Run ESLint on frontend
+        working-directory: ./frontend   # если фронтенд в папке frontend
+        run: npx eslint . --ext .js,.jsx,.ts,.tsx  # адаптируйте под свои расширения
+
+      # и используйте команды от корня. При необходимости установите зависимости в корне.
