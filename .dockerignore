@@ -4,3 +4,5 @@
 **/.git
 **/.env
 **/ml_venv
+**/postgres_data
+**/minio_data

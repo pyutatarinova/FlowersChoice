@@ -38,7 +38,6 @@ const MyPlantCard = ({ plant, onUpdate, onRemove }) => {
 
             <div className="md:border-r-2 border-emerald-50 pr-4">
                 <h5 className="text-lg font-semibold text-lime-700 mb-3 flex items-center"><Calendar className="w-5 h-5 mr-2"/> Уход</h5>
-                <div className="p-3 rounded-lg flex items-center justify-between text-sm font-medium mb-3" style={{ backgroundColor: isDue ? '#FEE2E2' : '#D1FAE5', color: isDue ? '#EF4444' : '#059669' }}>{status}</div>
                 <p className="text-sm text-emerald-600 mb-2">Последний полив: <span className="font-semibold">{formatDate(lastWatered)}</span></p>
                 <div className="flex items-center space-x-2 text-sm text-emerald-600 mb-4">
                     <span>График полива (дни):</span>
