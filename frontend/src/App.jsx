@@ -152,6 +152,31 @@ const App = () => {
         console.error('Ошибка обновления оценки растения:', e);
       }
     }
+
+    if (Object.prototype.hasOwnProperty.call(data, 'notes')) {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      try {
+        const response = await fetch('http://localhost:3001/api/update-plant-notes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            plant_id: docId,
+            notes: data.notes
+          })
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+      } catch (e) {
+        console.error('Ошибка обновления заметок растения:', e);
+      }
+    }
   }, []);
 
   const removePlant = useCallback(async (docId) => {
@@ -198,7 +223,7 @@ const App = () => {
         temp: plant.comfort_temp,
         size: plant.mature_size
       },
-      notes: '',
+      notes: plant.notes || '',
       rating: plant.score || 0,
       wateringSchedule: 7,
       wateringHistory: [new Date()],

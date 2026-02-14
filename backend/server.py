@@ -352,6 +352,12 @@ def userinfo(user_payload):
         return jsonify({"success": False, "message": "Ошибка получения данных"}), 500
 
 
+@app.route("/api/savefavourites", methods=["OPTIONS"])
+def savefavourites_options():
+    """Handle CORS preflight request for savefavourites"""
+    return "", 200
+
+
 @app.route("/api/savefavourites", methods=["POST"])
 @auth_required
 def save_favourites(user_payload):
@@ -418,6 +424,12 @@ def save_favourites(user_payload):
     except Exception as e:
         print("Ошибка при сохранении избранного:", e)
         return jsonify({"success": False, "message": "Ошибка сохранения в БД"}), 500
+
+
+@app.route("/api/add-my-plant", methods=["OPTIONS"])
+def add_my_plant_options():
+    """Handle CORS preflight request for add-my-plant"""
+    return "", 200
 
 
 @app.route("/api/add-my-plant", methods=["POST"])
@@ -501,22 +513,50 @@ def user_my_plants(user_payload):
               items:
                 type: object
                 properties:
-                  plant_id:
+                  id:
                     type: integer
-                  name:
+                  plant_name:
                     type: string
-                  description:
+                  score:
+                    type: number
+                  notes:
+                    type: string
+                  light_requirements:
+                    type: string
+                  watering_frequency:
+                    type: string
+                  comfort_temp:
+                    type: string
+                  mature_size:
+                    type: string
+                  brief_description:
+                    type: string
+                  photo:
                     type: string
             my_plant:
               type: array
               items:
                 type: object
                 properties:
-                  plant_id:
+                  id:
                     type: integer
-                  name:
+                  plant_name:
                     type: string
-                  description:
+                  score:
+                    type: number
+                  notes:
+                    type: string
+                  light_requirements:
+                    type: string
+                  watering_frequency:
+                    type: string
+                  comfort_temp:
+                    type: string
+                  mature_size:
+                    type: string
+                  brief_description:
+                    type: string
+                  photo:
                     type: string
       401:
         description: Unauthorized
@@ -744,6 +784,7 @@ def _format_plant_response(plant_data: dict) -> dict:
     merged["id"] = plant_data.get("id")
     merged["plant_name"] = plant_data.get("name")
     merged["score"] = plant_data.get("score", 0.0) if plant_data.get("score") is not None else 0.0
+    merged["notes"] = plant_data.get("notes", "")
 
     return merged
 
@@ -968,6 +1009,18 @@ def remove_plant(user_payload):
         return jsonify({"success": False, "message": "Ошибка удаления из БД"}), 500
 
 
+@app.route("/api/remove-plant", methods=["OPTIONS"])
+def remove_plant_options():
+    """Handle CORS preflight request for remove-plant"""
+    return "", 200
+
+
+@app.route("/api/update-plant-score", methods=["OPTIONS"])
+def update_plant_score_options():
+    """Handle CORS preflight request for update-plant-score"""
+    return "", 200
+
+
 @app.route("/api/update-plant-score", methods=["POST"])
 @auth_required
 def update_plant_score(user_payload):
@@ -1042,6 +1095,80 @@ def update_plant_score(user_payload):
         if "not found" in str(e):
             return jsonify({"success": False, "message": "Растение не найдено в коллекции пользователя"}), 404
         return jsonify({"success": False, "message": "Ошибка обновления оценки"}), 500
+
+
+@app.route("/api/update-plant-notes", methods=["OPTIONS"])
+def update_plant_notes_options():
+    """Handle CORS preflight request for update-plant-notes"""
+    return "", 200
+
+
+@app.route("/api/update-plant-notes", methods=["POST"])
+@auth_required
+def update_plant_notes(user_payload):
+    """
+    Update notes for a plant in user's collection
+    ---
+    tags:
+      - Plants
+    security:
+      - Bearer: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - plant_id
+            - notes
+          properties:
+            plant_id:
+              type: integer
+              example: 1
+            notes:
+              type: string
+              example: "Beautiful plant, needs bright light"
+              description: "Notes text for the plant"
+    responses:
+      200:
+        description: Notes updated successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            message:
+              type: string
+      400:
+        description: Missing required fields
+      401:
+        description: Unauthorized
+      404:
+        description: Plant not found in user's collection
+      500:
+        description: Database error
+    """
+    user_id = user_payload.get("user_id")
+
+    data = request.get_json()
+    if not data or "plant_id" not in data or "notes" not in data:
+        return jsonify({"success": False, "message": "Требуются plant_id и notes"}), 400
+
+    plant_id = data["plant_id"]
+    notes = str(data["notes"]).strip()
+
+    try:
+        repo = PlantRepository()
+        repo.update_plant_notes(user_id, plant_id, notes)
+
+        return jsonify({"success": True, "message": "Заметки обновлены"})
+
+    except Exception as e:
+        print(f"Ошибка при обновлении заметок растения: {e}")
+        if "not found" in str(e):
+            return jsonify({"success": False, "message": "Растение не найдено в коллекции пользователя"}), 404
+        return jsonify({"success": False, "message": "Ошибка обновления заметок"}), 500
 
 
 @app.route("/api/plants-rating", methods=["GET"])
