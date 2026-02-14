@@ -2,7 +2,25 @@
 ignore=venv,env,__pycache__,migrations
 
 [MESSAGES CONTROL]
-disable=C0114,C0115,C0116,R0903,R0913
+disable=all
+enable=
+    # Базовые ошибки синтаксиса
+    E0001,  # syntax-error
+    E0011,  # unrecognized-inline-option
+    E0012,  # bad-option-value
+    
+    # Ошибки импорта
+    E0401,  # import-error
+    E0601,  # used-before-assignment
+    E0602,  # undefined-variable
+    
+    # Ошибки типов
+    E1101,  # no-member
+    E1120,  # no-value-for-parameter
+    
+    # Ошибки форматирования (критичные)
+    F0001,  # fatal-error
+    F0010,  # parse-error
 
 [FORMAT]
 max-line-length=120

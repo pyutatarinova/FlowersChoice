@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import ComparisonCard from '../../components/comparison/ComparisonCard';
 
@@ -10,6 +10,43 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
     const [leftPlant, setLeftPlant] = useState(selectedPlants[0]);
     const [rightPlant, setRightPlant] = useState(selectedPlants.length > 1 ? selectedPlants[1] : null);
     const [nextIndex, setNextIndex] = useState(2);
+
+    const handleChoice = useCallback((chosenPlant) => {
+        const loserPlant = chosenPlant.id === leftPlant.id ? rightPlant : leftPlant;
+        const remainingPlants = comparisonList.filter(p => p.id !== loserPlant.id);
+        
+        if (remainingPlants.length === 1) {
+            setWinner(chosenPlant);
+        } else {
+            setComparisonList(remainingPlants); 
+            const nextPlantInQueue = selectedPlants[nextIndex];
+            if (nextPlantInQueue) {
+                if (chosenPlant.id === leftPlant.id) setRightPlant(nextPlantInQueue);
+                else setLeftPlant(nextPlantInQueue);
+                setNextIndex(prev => prev + 1);
+            } else {
+                setWinner(chosenPlant); 
+            }
+        }
+    }, [leftPlant, rightPlant, comparisonList, selectedPlants, nextIndex]);
+
+    // Добавляем обработку горячих клавиш
+    React.useEffect(() => {
+        if (winner) return; // Отключаем горячие клавиши после выбора победителя
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                handleChoice(leftPlant);
+            } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                handleChoice(rightPlant);
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [winner, leftPlant, rightPlant, handleChoice]);
 
     const handleAddWinnerToMyPlants = async (plant) => {
         onAddToMyPlants(plant);
@@ -40,25 +77,6 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
         } catch (error) {
             console.error('Error adding winner to my plants:', error);
             alert('Ошибка при добавлении растения');
-        }
-    };
-
-    const handleChoice = (chosenPlant) => {
-        const loserPlant = chosenPlant.id === leftPlant.id ? rightPlant : leftPlant;
-        const remainingPlants = comparisonList.filter(p => p.id !== loserPlant.id);
-        
-        if (remainingPlants.length === 1) {
-            setWinner(chosenPlant);
-        } else {
-            setComparisonList(remainingPlants); 
-            const nextPlantInQueue = selectedPlants[nextIndex];
-            if (nextPlantInQueue) {
-                if (chosenPlant.id === leftPlant.id) setRightPlant(nextPlantInQueue);
-                else setLeftPlant(nextPlantInQueue);
-                setNextIndex(prev => prev + 1);
-            } else {
-                setWinner(chosenPlant); 
-            }
         }
     };
     

@@ -5,7 +5,10 @@ const ManualSelectionCard = ({ plant, isFavorite, onSelect, onAddToFavorites }) 
   if (!plant) return null;
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl p-6 border-4 transition-all duration-300 text-center border-lime-300 hover:border-lime-500 hover:scale-[1.02] h-full flex flex-col">
+    <div 
+      onClick={onSelect}
+      className="bg-white rounded-2xl shadow-xl p-6 border-4 transition-all duration-300 text-center border-lime-300 hover:border-lime-500 hover:scale-[1.02] h-full flex flex-col cursor-pointer"
+    >
       <img
         src={plant.photo}
         alt={plant.plant_name}
@@ -25,7 +28,7 @@ const ManualSelectionCard = ({ plant, isFavorite, onSelect, onAddToFavorites }) 
         {plant.brief_description}
       </p>
 
-      <div className="mt-auto flex flex-col gap-3">
+      <div className="mt-auto flex flex-col gap-3" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={onSelect}
           className="w-full py-3 font-bold rounded-xl text-white shadow-lg bg-emerald-500 hover:bg-emerald-600 transition"
