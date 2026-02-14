@@ -39,7 +39,7 @@ function LoginModal({ onClose, onLogin }) {
   };
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4">
+    <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 p-4">
       <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl text-left">
         <h3 className="text-2xl font-bold text-emerald-800 mb-4 text-center">Вход</h3>
         <div className="mb-3">

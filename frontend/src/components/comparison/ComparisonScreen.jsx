@@ -3,7 +3,7 @@ import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, Chev
 import ComparisonCard from '../../components/comparison/ComparisonCard';
 
 
-const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants }) => {
+const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants, onRequireAuth }) => {
     const [comparisonList, setComparisonList] = useState(selectedPlants);
     const [winner, setWinner] = useState(null);
     
@@ -49,15 +49,15 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
     }, [winner, leftPlant, rightPlant, handleChoice]);
 
     const handleAddWinnerToMyPlants = async (plant) => {
-        onAddToMyPlants(plant);
-        
         try {
             const token = localStorage.getItem('authToken');
             if (!token) {
-                alert('Необходимо авторизоваться');
+                if (onRequireAuth) onRequireAuth();
                 return;
             }
-            
+
+            if (onAddToMyPlants) onAddToMyPlants(plant);
+
             const response = await fetch('http://localhost:3001/api/add-my-plant', {
                 method: 'POST',
                 headers: {
@@ -76,7 +76,6 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
             
         } catch (error) {
             console.error('Error adding winner to my plants:', error);
-            alert('Ошибка при добавлении растения');
         }
     };
     

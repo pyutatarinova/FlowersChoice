@@ -2,20 +2,20 @@ import React, { useState } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import FavoriteItem from '../../components/favorites/FavoriteItem';
 
-const FavoritesScreen = ({ favorites, setFavorites, onNavigate }) => {
+const FavoritesScreen = ({ favorites, setFavorites, onNavigate, onAddToMyPlants, onRequireAuth }) => {
   const [selectedForComparison, setSelectedForComparison] = useState([]);
   const [detailedPlantId, setDetailedPlantId] = useState(null);
 
   const handleAddToMyPlants = async (plant) => {
-    if (window.AppFunctions?.addToMyPlants) window.AppFunctions.addToMyPlants(plant);
-    
     try {
       const token = localStorage.getItem('authToken');
       if (!token) {
-        alert('Необходимо авторизоваться');
+        if (onRequireAuth) onRequireAuth();
         return;
       }
-      
+
+      if (onAddToMyPlants) onAddToMyPlants(plant);
+
       const response = await fetch('http://localhost:3001/api/add-my-plant', {
         method: 'POST',
         headers: {
@@ -34,7 +34,6 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate }) => {
       
     } catch (error) {
       console.error('Error adding plant to my plants:', error);
-      alert('Ошибка при добавлении растения');
     }
   };
   

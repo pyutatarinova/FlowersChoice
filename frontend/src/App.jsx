@@ -8,6 +8,7 @@ import Header from './components/header/Header';
 // auth
 import AuthModal from './components/auth/AuthModal';
 import LoginModal from './components/auth/LoginModal';
+import AuthRequiredModal from './components/auth/AuthRequiredModal';
 
 // questionnaire
 import QuestionStep from './components/question/QuestionStep';
@@ -79,6 +80,7 @@ const App = () => {
   const [comparisonPlants, setComparisonPlants] = useState([]); 
   const [showAuthWidget, setShowAuthWidget] = useState(false);
   const [showLoginWidget, setShowLoginWidget] = React.useState(false);
+  const [showAuthRequired, setShowAuthRequired] = useState(false);
   
   // eslint-disable-next-line no-unused-vars
   const [userId, setUserId] = useState(null);
@@ -98,6 +100,11 @@ const App = () => {
   // --- STUBS for plant actions (replace with backend logic if needed) ---
   const addToMyPlants = useCallback(async (plant) => {
     if (!plant || !plant.id) return;
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setShowAuthRequired(true);
+      return;
+    }
     // Проверяем по id и originalId (на случай разных структур)
     if (myPlants.some(p => p.originalId === plant.id || p.id === plant.id)) return;
     // Унифицируем структуру для MyPlants
@@ -371,9 +378,9 @@ const App = () => {
       }
       case 'loading': return <LoadingScreen />;
       case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
-      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
+      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
       case 'manual_selection': return <ManualSelectionScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
-      case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} />;
+      case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
       case 'my_plants': return <MyPlantsScreen myPlants={myPlants} onUpdatePlant={updatePlant} onRemovePlant={removePlant} onNavigate={navigate} />;
       case 'profile': return <ProfileScreen
         userProfile={userProfile}
@@ -537,6 +544,19 @@ const App = () => {
             }
             setShowLoginWidget(false);
             navigate('home');
+          }}
+        />
+      )}
+      {showAuthRequired && (
+        <AuthRequiredModal
+          onClose={() => setShowAuthRequired(false)}
+          onLogin={() => {
+            setShowAuthRequired(false);
+            setShowLoginWidget(true);
+          }}
+          onRegister={() => {
+            setShowAuthRequired(false);
+            setShowAuthWidget(true);
           }}
         />
       )}
