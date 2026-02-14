@@ -268,9 +268,7 @@ class PlantRepository:
                 """,
                     (user_id,),
                 )
-
                 rows = cur.fetchall()
-
                 results = []
                 for r in rows:
                     plant = {

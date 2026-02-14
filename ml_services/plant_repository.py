@@ -275,7 +275,7 @@ class PlantRepository:
                 for r in rows:
                     user_features = r.get("user_features") or {}
                     notes = user_features.get("notes", "") if isinstance(user_features, dict) else ""
-                    
+
                     plant = {
                         "id": int(r["id"]),
                         "name": r.get("name"),
