@@ -199,7 +199,7 @@ const App = () => {
         size: plant.mature_size
       },
       notes: '',
-      rating: 5,
+      rating: plant.score || 0,
       wateringSchedule: 7,
       wateringHistory: [new Date()],
       addedAt: new Date()
