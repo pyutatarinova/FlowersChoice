@@ -16,13 +16,15 @@ from typing import Any, Dict, List
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-# Support both direct execution and package imports
+# Support both in-app import (from backend/server.py) and direct execution.
+# When running via backend/server.py, backend/ is already on sys.path and we can
+# import the module directly. For standalone runs, add backend/ to sys.path.
 try:
-    from ..backend.plant_repository import PlantRepository
+    from plant_repository import PlantRepository
 except ImportError:
-    # Add current directory to path for direct execution
-    sys.path.insert(0, str(Path(__file__).parent))
-    from backend.plant_repository import PlantRepository
+    backend_dir = Path(__file__).resolve().parents[1] / "backend"
+    sys.path.insert(0, str(backend_dir))
+    from plant_repository import PlantRepository
 
 
 class PlantSearchService:
