@@ -1,19 +1,20 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
-from flasgger import Swagger
+import base64
 import json
 import os
-import base64
+
 # import psycopg2
 import random
-from datetime import date, datetime, timedelta, timezone
-from dotenv import load_dotenv
-import jwt
-from functools import wraps
 import sys
+from datetime import date, datetime, timedelta, timezone
+from functools import wraps
 from pathlib import Path
-from typing import List, Tuple, Dict, Any
+from typing import Any, List, Tuple
 
+import jwt
+from dotenv import load_dotenv
+from flasgger import Swagger
+from flask import Flask, jsonify, request
+from flask_cors import CORS
 
 # Add ml_services to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "ml_services"))
@@ -23,26 +24,23 @@ from plant_repository import PlantRepository
 app = Flask(__name__)
 CORS(app)
 # Конфигурация Swagger с API Key
-app.config['SWAGGER'] = {
-    'title': 'FlowersChoice API',
-    'uiversion': 3,
-    'securityDefinitions': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header',
-            'description': 'Введите: Bearer <ваш_токен>'
+app.config["SWAGGER"] = {
+    "title": "FlowersChoice API",
+    "uiversion": 3,
+    "securityDefinitions": {
+        "Bearer": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header",
+            "description": "Введите: Bearer <ваш_токен>",
         }
     },
-    'security': [
-        {'Bearer': []}
-    ]
+    "security": [{"Bearer": []}],
 }
 swagger = Swagger(app)
 
 PORT = 3001
-load_dotenv(dotenv_path=Path(__file__).parent / '.env')
-
+load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 
 JWT_SECRET = os.getenv("JWT_SECRET", "SUPER_SECRET_KEY")
@@ -56,11 +54,12 @@ JWT_EXPIRE_MIN = 60
 def generate_vector_embedding(dim=768):
     return [random.uniform(-1.0, 1.0) for _ in range(dim)]
 
+
 def create_token(user_id, email):
     payload = {
         "user_id": user_id,
         "email": email,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MIN)
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MIN),
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
 
@@ -94,11 +93,12 @@ def auth_required(f):
 
 def auth_optional(f):
     """Decorator that extracts user_id if token is present, otherwise uses a system user_id."""
+
     @wraps(f)
     def wrapper(*args, **kwargs):
         auth_header = request.headers.get("Authorization")
         user_payload = {"user_id": -1}  # Default system user_id
-        
+
         if auth_header and auth_header.startswith("Bearer "):
             token = auth_header.split(" ")[1]
             try:
@@ -113,15 +113,16 @@ def auth_optional(f):
             except Exception as e:
                 print(f"Unexpected error during token decode: {e}, using system user_id")
                 user_payload = {"user_id": -1}
-        
+
         return f(user_payload, *args, **kwargs)
 
     return wrapper
 
+
 # -----------------------------
 # Register
 # -----------------------------
-@app.route('/api/register', methods=['POST'])
+@app.route("/api/register", methods=["POST"])
 def register():
     """
     Register a new user
@@ -179,13 +180,13 @@ def register():
     if not profile or not all(k in profile for k in ["name", "email", "password"]):
         return jsonify({"success": False, "message": "Некорректные данные"}), 400
 
-    encoded_password = base64.b64encode(profile['password'].encode("utf-8")).decode("utf-8")
+    encoded_password = base64.b64encode(profile["password"].encode("utf-8")).decode("utf-8")
 
     features = {
         "has_children": profile.get("has_children"),
         "has_pets": profile.get("has_pets"),
         "has_allergies": profile.get("has_allergies"),
-        "preferences": profile.get("preferences")
+        "preferences": profile.get("preferences"),
     }
 
     embedding = generate_vector_embedding()
@@ -193,18 +194,18 @@ def register():
     try:
         repo = PlantRepository()
         user_id = repo.register_user(
-            name=profile['name'],
-            email=profile['email'],
+            name=profile["name"],
+            email=profile["email"],
             encoded_password=encoded_password,
             features=features,
             embedding=embedding,
             created_at=date.today(),
-            updated_at=date.today()
+            updated_at=date.today(),
         )
 
-        token = create_token(user_id, profile['email'])
+        token = create_token(user_id, profile["email"])
 
-        repo.update_user_token(user_id, token) # Update token in database
+        repo.update_user_token(user_id, token)  # Update token in database
 
         return jsonify({"success": True, "token": token, "message": "Регистрация успешна"})
 
@@ -216,7 +217,7 @@ def register():
 # -----------------------------
 # Login
 # -----------------------------
-@app.route('/api/login', methods=['POST'])
+@app.route("/api/login", methods=["POST"])
 def login():
     """
     User login
@@ -266,11 +267,11 @@ def login():
     if not data or "email" not in data or "password" not in data:
         return jsonify({"success": False, "message": "Некорректные данные"}), 400
 
-    encoded_password = base64.b64encode(data['password'].encode("utf-8")).decode("utf-8")
+    encoded_password = base64.b64encode(data["password"].encode("utf-8")).decode("utf-8")
 
     try:
         repo = PlantRepository()
-        user_data = repo.get_user_by_email(data['email'])
+        user_data = repo.get_user_by_email(data["email"])
 
         if not user_data:
             return jsonify({"success": False, "message": "Пользователь не найден"}), 404
@@ -280,7 +281,7 @@ def login():
         if stored_password != encoded_password:
             return jsonify({"success": False, "message": "Неверный пароль"}), 401
 
-        new_token = create_token(user_id, data['email'])
+        new_token = create_token(user_id, data["email"])
         repo.update_user_token(user_id, new_token)
 
         return jsonify({"success": True, "token": new_token, "message": "Успешный вход"})
@@ -293,7 +294,7 @@ def login():
 # -----------------------------
 # User Info (with middleware)
 # -----------------------------
-@app.route('/api/userinfo', methods=['GET'])
+@app.route("/api/userinfo", methods=["GET"])
 @auth_required
 def userinfo(user_payload):
     """
@@ -351,7 +352,13 @@ def userinfo(user_payload):
         return jsonify({"success": False, "message": "Ошибка получения данных"}), 500
 
 
-@app.route('/api/savefavourites', methods=['POST'])
+@app.route("/api/savefavourites", methods=["OPTIONS"])
+def savefavourites_options():
+    """Handle CORS preflight request for savefavourites"""
+    return "", 200
+
+
+@app.route("/api/savefavourites", methods=["POST"])
 @auth_required
 def save_favourites(user_payload):
     """
@@ -405,11 +412,11 @@ def save_favourites(user_payload):
 
     try:
         repo = PlantRepository()
-        
+
         # Check if plant already exists
         if repo.check_user_plant_exists(user_id, plant_id):
             return jsonify({"success": False, "message": "Растение уже сохранено"}), 409
-        
+
         repo.add_user_plant_favorite(user_id, plant_id)
 
         return jsonify({"success": True, "message": "Растение добавлено в избранное"})
@@ -419,7 +426,13 @@ def save_favourites(user_payload):
         return jsonify({"success": False, "message": "Ошибка сохранения в БД"}), 500
 
 
-@app.route('/api/add-my-plant', methods=['POST'])
+@app.route("/api/add-my-plant", methods=["OPTIONS"])
+def add_my_plant_options():
+    """Handle CORS preflight request for add-my-plant"""
+    return "", 200
+
+
+@app.route("/api/add-my-plant", methods=["POST"])
 @auth_required
 def add_my_plant(user_payload):
     """
@@ -475,9 +488,9 @@ def add_my_plant(user_payload):
     except Exception as e:
         print("Ошибка при добавлении растения:", e)
         return jsonify({"success": False, "message": "Ошибка сохранения в БД"}), 500
-    
 
-@app.route('/api/userplants', methods=['GET'])
+
+@app.route("/api/userplants", methods=["GET"])
 @auth_required
 def user_my_plants(user_payload):
     """
@@ -500,22 +513,50 @@ def user_my_plants(user_payload):
               items:
                 type: object
                 properties:
-                  plant_id:
+                  id:
                     type: integer
-                  name:
+                  plant_name:
                     type: string
-                  description:
+                  score:
+                    type: number
+                  notes:
+                    type: string
+                  light_requirements:
+                    type: string
+                  watering_frequency:
+                    type: string
+                  comfort_temp:
+                    type: string
+                  mature_size:
+                    type: string
+                  brief_description:
+                    type: string
+                  photo:
                     type: string
             my_plant:
               type: array
               items:
                 type: object
                 properties:
-                  plant_id:
+                  id:
                     type: integer
-                  name:
+                  plant_name:
                     type: string
-                  description:
+                  score:
+                    type: number
+                  notes:
+                    type: string
+                  light_requirements:
+                    type: string
+                  watering_frequency:
+                    type: string
+                  comfort_temp:
+                    type: string
+                  mature_size:
+                    type: string
+                  brief_description:
+                    type: string
+                  photo:
                     type: string
       401:
         description: Unauthorized
@@ -526,33 +567,25 @@ def user_my_plants(user_payload):
 
     try:
         repo = PlantRepository()
-        
+
         favorite_plants_data = repo.get_user_plants_by_flag(user_id, "favorite")
         my_plants_data = repo.get_user_plants_by_flag(user_id, "my_plant")
-        
+
         # Format results
         favorite_plants = [_format_plant_response(p) for p in favorite_plants_data]
         my_plants = [_format_plant_response(p) for p in my_plants_data]
 
-        return jsonify({
-            "success": True,
-            "favorite": favorite_plants,
-            "my_plant": my_plants
-        })
+        return jsonify({"success": True, "favorite": favorite_plants, "my_plant": my_plants})
 
     except Exception as e:
         print("Ошибка в /api/userplants:", e)
-        return jsonify({
-            "success": False,
-            "message": "Ошибка получения растений пользователя"
-        }), 500
-
+        return jsonify({"success": False, "message": "Ошибка получения растений пользователя"}), 500
 
 
 # -----------------------------
 # Search Similar Plants - ML
 # -----------------------------
-def _build_search_prompt(search_criteria: dict) -> str:
+def _build_prompt(search_criteria: dict) -> str: # noqa: C901
     """Build a robust search query string from questionnaire payload."""
     if not isinstance(search_criteria, dict):
         return ""
@@ -654,9 +687,7 @@ def _build_search_prompt(search_criteria: dict) -> str:
             result.append(cleaned)
         return result
 
-    has_gift_answers = any(
-        search_criteria.get(k) for k in ("recipient", "occasion", "style", "gift_location")
-    )
+    has_gift_answers = any(search_criteria.get(k) for k in ("recipient", "occasion", "style", "gift_location"))
     scenario = "gift" if has_gift_answers else "personal"
 
     if scenario == "gift":
@@ -726,47 +757,48 @@ def _build_search_prompt(search_criteria: dict) -> str:
 def _format_plant_response(plant_data: dict) -> dict:
     """Format plant data for frontend response with desired fields."""
     desired_features = [
-        'light_requirements',
-        'watering_frequency',
-        'comfort_temp',
-        'mature_size',
-        'brief_description',
-        'photo'
+        "light_requirements",
+        "watering_frequency",
+        "comfort_temp",
+        "mature_size",
+        "brief_description",
+        "photo",
     ]
-    
-    features = plant_data.get('features') or {}
+
+    features = plant_data.get("features") or {}
     if isinstance(features, str):
         try:
             features = json.loads(features)
         except json.JSONDecodeError:
             features = {}
-    
+
     merged = {}
-    
+
     # Extract only desired features from the features JSONB
     if isinstance(features, dict):
         for key in desired_features:
             if key in features:
                 merged[key] = features[key]
-    
+
     # Add primary fields (ensure they override feature keys)
-    merged['id'] = plant_data.get('id')
-    merged['plant_name'] = plant_data.get('name')
-    merged['score'] = plant_data.get('score', 0.0) if plant_data.get('score') is not None else 0.0
-    
+    merged["id"] = plant_data.get("id")
+    merged["plant_name"] = plant_data.get("name")
+    merged["score"] = plant_data.get("score", 0.0) if plant_data.get("score") is not None else 0.0
+    merged["notes"] = plant_data.get("notes", "")
+
     return merged
 
 
 def _format_plant_response_with_rating(plant_data: dict) -> dict:
     """Format plant data for frontend response including rating information."""
     result = _format_plant_response(plant_data)
-    result['avg_score'] = plant_data.get('avg_score', 0.0)
-    result['rating_count'] = plant_data.get('rating_count', 0)
-    result['rating_position'] = plant_data.get('rating_position', 0)
+    result["avg_score"] = plant_data.get("avg_score", 0.0)
+    result["rating_count"] = plant_data.get("rating_count", 0)
+    result["rating_position"] = plant_data.get("rating_position", 0)
     return result
 
 
-@app.route('/api/search-plants', methods=['POST'])
+@app.route("/api/search-plants", methods=["POST"])
 @auth_optional
 def search_plants(user_payload):
     """
@@ -867,44 +899,44 @@ def search_plants(user_payload):
     """
     try:
         from search_similar import PlantSearchService
-        
+
         data = request.get_json()
         if not data:
             return jsonify({"success": False, "message": "Ожидались критерии поиска"}), 400
         print(data)
         # Build search prompt from criteria
-        prompt = _build_search_prompt(data)
+        prompt = _build_prompt(data)
         print(prompt)
         if not prompt or not prompt.strip():
             return jsonify({"success": False, "message": "Пожалуйста, укажите критерии поиска"}), 400
-        
+
         # Search for similar plants
-        user_id = user_payload.get('user_id')
+        user_id = user_payload.get("user_id")
         service = PlantSearchService()
         results = service.find_similar_plants(prompt, user_id=user_id, top_k=10)
-        
+
         # Format results for frontend
         formatted_results = []
         for plant in results:
             formatted_plant = _format_plant_response(plant)
             formatted_results.append(formatted_plant)
-        
+
         # return jsonify({
         #     # "success": True,
         #     "plants": formatted_results
         # })
         return jsonify(formatted_results)
-    
+
     except ImportError as e:
         print("Ошибка импорта сервиса поиска:", e)
         return jsonify({"success": False, "message": "Сервис поиска недоступен"}), 500
-    
+
     except Exception as e:
         print("Ошибка при поиске растений:", e)
         return jsonify({"success": False, "message": "Ошибка при поиске растений"}), 500
 
 
-@app.route('/api/remove-plant', methods=['POST'])
+@app.route("/api/remove-plant", methods=["POST"])
 @auth_required
 def remove_plant(user_payload):
     """
@@ -950,34 +982,46 @@ def remove_plant(user_payload):
         description: Database error
     """
     user_id = user_payload.get("user_id")
-    
+
     data = request.get_json()
     if not data or "plant_id" not in data or "flag" not in data:
         return jsonify({"success": False, "message": "Требуются plant_id и flag"}), 400
-    
+
     plant_id = data["plant_id"]
     flag = data["flag"]
-    
+
     # Validate flag
-    if flag not in ['favorite', 'my_plant']:
+    if flag not in ["favorite", "my_plant"]:
         return jsonify({"success": False, "message": "flag должен быть 'favorite' или 'my_plant'"}), 400
-    
+
     try:
         repo = PlantRepository()
         message = repo.remove_user_plant_flag(user_id, plant_id, flag)
-        
+
         return jsonify({"success": True, "message": message})
-    
+
     except ValueError as e:
         print(f"Ошибка валидации при удалении растения: {e}")
         return jsonify({"success": False, "message": str(e)}), 400
-    
+
     except Exception as e:
         print(f"Ошибка при удалении растения: {e}")
         return jsonify({"success": False, "message": "Ошибка удаления из БД"}), 500
 
 
-@app.route('/api/update-plant-score', methods=['POST'])
+@app.route("/api/remove-plant", methods=["OPTIONS"])
+def remove_plant_options():
+    """Handle CORS preflight request for remove-plant"""
+    return "", 200
+
+
+@app.route("/api/update-plant-score", methods=["OPTIONS"])
+def update_plant_score_options():
+    """Handle CORS preflight request for update-plant-score"""
+    return "", 200
+
+
+@app.route("/api/update-plant-score", methods=["POST"])
 @auth_required
 def update_plant_score(user_payload):
     """
@@ -1024,28 +1068,28 @@ def update_plant_score(user_payload):
         description: Database error
     """
     user_id = user_payload.get("user_id")
-    
+
     data = request.get_json()
     if not data or "plant_id" not in data or "score" not in data:
         return jsonify({"success": False, "message": "Требуются plant_id и score"}), 400
-    
+
     plant_id = data["plant_id"]
-    
+
     # Validate score is numeric
     try:
         score = float(data["score"])
     except (ValueError, TypeError):
         return jsonify({"success": False, "message": "score должен быть числовым значением"}), 400
-    
+
     if score < 0 or score > 5:
         return jsonify({"success": False, "message": "score должен быть в диапазоне от 0 до 5"}), 400
-    
+
     try:
         repo = PlantRepository()
         repo.update_plant_score(user_id, plant_id, score)
-        
+
         return jsonify({"success": True, "message": "Оценка обновлена"})
-    
+
     except Exception as e:
         print(f"Ошибка при обновлении оценки растения: {e}")
         if "not found" in str(e):
@@ -1053,7 +1097,81 @@ def update_plant_score(user_payload):
         return jsonify({"success": False, "message": "Ошибка обновления оценки"}), 500
 
 
-@app.route('/api/plants-rating', methods=['GET'])
+@app.route("/api/update-plant-notes", methods=["OPTIONS"])
+def update_plant_notes_options():
+    """Handle CORS preflight request for update-plant-notes"""
+    return "", 200
+
+
+@app.route("/api/update-plant-notes", methods=["POST"])
+@auth_required
+def update_plant_notes(user_payload):
+    """
+    Update notes for a plant in user's collection
+    ---
+    tags:
+      - Plants
+    security:
+      - Bearer: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - plant_id
+            - notes
+          properties:
+            plant_id:
+              type: integer
+              example: 1
+            notes:
+              type: string
+              example: "Beautiful plant, needs bright light"
+              description: "Notes text for the plant"
+    responses:
+      200:
+        description: Notes updated successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            message:
+              type: string
+      400:
+        description: Missing required fields
+      401:
+        description: Unauthorized
+      404:
+        description: Plant not found in user's collection
+      500:
+        description: Database error
+    """
+    user_id = user_payload.get("user_id")
+
+    data = request.get_json()
+    if not data or "plant_id" not in data or "notes" not in data:
+        return jsonify({"success": False, "message": "Требуются plant_id и notes"}), 400
+
+    plant_id = data["plant_id"]
+    notes = str(data["notes"]).strip()
+
+    try:
+        repo = PlantRepository()
+        repo.update_plant_notes(user_id, plant_id, notes)
+
+        return jsonify({"success": True, "message": "Заметки обновлены"})
+
+    except Exception as e:
+        print(f"Ошибка при обновлении заметок растения: {e}")
+        if "not found" in str(e):
+            return jsonify({"success": False, "message": "Растение не найдено в коллекции пользователя"}), 404
+        return jsonify({"success": False, "message": "Ошибка обновления заметок"}), 500
+
+
+@app.route("/api/plants-rating", methods=["GET"])
 def plants_rating():
     """
     Get plants rating sorted by average user scores with pagination
@@ -1125,53 +1243,55 @@ def plants_rating():
     """
     try:
         # Get pagination parameters
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 20, type=int)
-        
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 20, type=int)
+
         # Validate pagination parameters
         if page < 1:
             page = 1
         if per_page < 1 or per_page > 200:
             per_page = 20
-        
+
         repo = PlantRepository()
         all_plants = repo.get_plants_rating()
-        
+
         total_count = len(all_plants)
         total_pages = (total_count + per_page - 1) // per_page
-        
+
         # Calculate pagination bounds
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
-        
+
         # Check if page is valid
         if page > total_pages and total_count > 0:
-            return jsonify({
-                "success": False,
-                "message": f"Страница {page} не существует. Всего страниц: {total_pages}"
-            }), 400
-        
+            return (
+                jsonify({"success": False, "message": f"Страница {page} не существует. Всего страниц: {total_pages}"}),
+                400,
+            )
+
         # Get paginated plants
         paginated_plants = all_plants[start_idx:end_idx]
-        
+
         # Format results
         formatted_plants = [_format_plant_response_with_rating(p) for p in paginated_plants]
-        
-        return jsonify({
-            "success": True,
-            "total_count": total_count,
-            "page": page,
-            "per_page": per_page,
-            "total_pages": total_pages,
-            "plants": formatted_plants
-        })
-    
+
+        return jsonify(
+            {
+                "success": True,
+                "total_count": total_count,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": total_pages,
+                "plants": formatted_plants,
+            }
+        )
+
     except Exception as e:
         print(f"Ошибка при получении рейтинга растений: {e}")
         return jsonify({"success": False, "message": "Ошибка получения рейтинга"}), 500
 
 
-@app.route('/api/plants-rating/filter', methods=['GET'])
+@app.route("/api/plants-rating/filter", methods=["GET"])
 def plants_rating_filter():
     """
     Get filtered and paginated plants rating.
@@ -1227,13 +1347,13 @@ def plants_rating_filter():
         description: Server error
     """
     try:
-        page = request.args.get('page', 1, type=int)
-        per_page = request.args.get('per_page', 200, type=int)
-        search = request.args.get('search', default=None, type=str)
-        growth_rate = request.args.get('growth_rate', default=None, type=str)
-        comfort_temp_raw = request.args.get('comfort_temp', default=None, type=str)
-        flowering_misting_raw = request.args.get('flowering_misting', default=None, type=str)
-        toxicity = request.args.get('toxicity', default=None, type=str)
+        page = request.args.get("page", 1, type=int)
+        per_page = request.args.get("per_page", 200, type=int)
+        search = request.args.get("search", default=None, type=str)
+        growth_rate = request.args.get("growth_rate", default=None, type=str)
+        comfort_temp_raw = request.args.get("comfort_temp", default=None, type=str)
+        flowering_misting_raw = request.args.get("flowering_misting", default=None, type=str)
+        toxicity = request.args.get("toxicity", default=None, type=str)
 
         if page < 1:
             page = 1
@@ -1242,14 +1362,14 @@ def plants_rating_filter():
 
         comfort_temp = None
         if comfort_temp_raw is not None and str(comfort_temp_raw).strip() != "":
-            comfort_temp = float(str(comfort_temp_raw).replace(',', '.'))
+            comfort_temp = float(str(comfort_temp_raw).replace(",", "."))
 
         flowering_misting = None
         if flowering_misting_raw is not None and str(flowering_misting_raw).strip() != "":
             normalized_bool = str(flowering_misting_raw).strip().lower()
-            if normalized_bool in ('true', '1', 'yes'):
+            if normalized_bool in ("true", "1", "yes"):
                 flowering_misting = True
-            elif normalized_bool in ('false', '0', 'no'):
+            elif normalized_bool in ("false", "0", "no"):
                 flowering_misting = False
             else:
                 return jsonify({"success": False, "message": "Invalid flowering_misting value"}), 400
@@ -1270,22 +1390,24 @@ def plants_rating_filter():
         end_idx = start_idx + per_page
 
         if page > total_pages and total_count > 0:
-            return jsonify({
-                "success": False,
-                "message": f"Page {page} does not exist. Total pages: {total_pages}"
-            }), 400
+            return (
+                jsonify({"success": False, "message": f"Page {page} does not exist. Total pages: {total_pages}"}),
+                400,
+            )
 
         paginated_plants = all_plants[start_idx:end_idx]
         formatted_plants = [_format_plant_response_with_rating(p) for p in paginated_plants]
 
-        return jsonify({
-            "success": True,
-            "total_count": total_count,
-            "page": page,
-            "per_page": per_page,
-            "total_pages": total_pages,
-            "plants": formatted_plants
-        })
+        return jsonify(
+            {
+                "success": True,
+                "total_count": total_count,
+                "page": page,
+                "per_page": per_page,
+                "total_pages": total_pages,
+                "plants": formatted_plants,
+            }
+        )
 
     except ValueError:
         return jsonify({"success": False, "message": "Invalid comfort_temp value"}), 400
@@ -1293,8 +1415,9 @@ def plants_rating_filter():
         print(f"Error in /api/plants-rating/filter: {e}")
         return jsonify({"success": False, "message": "Filter rating error"}), 500
 
+
 # -----------------------------
 # Start server
 # -----------------------------
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=PORT)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=PORT)

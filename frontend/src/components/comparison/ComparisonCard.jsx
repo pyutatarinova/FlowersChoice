@@ -1,7 +1,7 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 
-const ComparisonCard = ({ plant, isLeft, onSelect }) => (
+const ComparisonCard = ({ plant, onSelect }) => (
   <div
     onClick={() => onSelect(plant)}
     className={`bg-white rounded-2xl shadow-xl p-6 border-4 cursor-pointer transition-all duration-300 hover:scale-[1.02] text-center border-lime-300 hover:border-lime-500 h-full flex flex-col`}

@@ -6,22 +6,24 @@ user text prompt to an embedding and delegates the nearest-neighbour search to
 returns the top-K (id, distance) tuples ordered by cosine distance (smaller
 means more similar).
 """
+
 from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import List, Tuple, Dict, Any
-import json
+from typing import Any, Dict, List
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
 
-# Support both direct execution and package imports
+# Support both in-app import (from backend/server.py) and direct execution.
+# When running via backend/server.py, backend/ is already on sys.path and we can
+# import the module directly. For standalone runs, add backend/ to sys.path.
 try:
-    from .plant_repository import PlantRepository
+    from plant_repository import PlantRepository
 except ImportError:
-    # Add current directory to path for direct execution
-    sys.path.insert(0, str(Path(__file__).parent))
+    backend_dir = Path(__file__).resolve().parents[1] / "backend"
+    sys.path.insert(0, str(backend_dir))
     from plant_repository import PlantRepository
 
 
@@ -62,9 +64,9 @@ class PlantSearchService:
         """
         if not isinstance(text, str) or not text.strip():
             return []
-        print('Starting embedding computation...')
+        print("Starting embedding computation...")
         embedding = self._embed_text(text.strip())
-        print('Embedding computed, querying repository...')
+        print("Embedding computed, querying repository...")
         results = self.repo.top_k_by_embedding(embedding, user_id=user_id, k=top_k)
         return results
 
@@ -108,4 +110,3 @@ class PlantSearchService:
 #     matches = find_similar_plants(prompt, top_k=10)
 #     print("Results (id, distance):")
 #     print(matches)
-

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import { mockResults } from '../../constants/mockResults';
 import ManualSelectionCard from './ManualSelectionCard';
@@ -131,12 +131,12 @@ const ManualSelectionScreen = ({ favorites, setFavorites }) => {
     });
   }, [getNextPlant]);
 
-  const handleSelect = (index) => {
+  const handleSelect = useCallback((index) => {
     const otherIndex = index === 0 ? 1 : 0;
     replaceCard(otherIndex, true);
-  };
+  }, [replaceCard]);
 
-  const handleAddToFavorites = async (plant, index) => {
+  const handleAddToFavorites = useCallback(async (plant, index) => {
     if (!plant) return;
 
     const alreadyFavorite = favorites.some(f => f.id === plant.id);
@@ -163,7 +163,33 @@ const ManualSelectionScreen = ({ favorites, setFavorites }) => {
     }
 
     replaceCard(index, false);
-  };
+  }, [favorites, replaceCard]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Добавляем горячие клавиши
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!currentPair || currentPair.length === 0) return;
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (e.shiftKey && currentPair[0]) {
+          handleAddToFavorites(currentPair[0], 0);
+        } else if (currentPair[0]) {
+          handleSelect(0);
+        }
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (e.shiftKey && currentPair[1]) {
+          handleAddToFavorites(currentPair[1], 1);
+        } else if (currentPair[1]) {
+          handleSelect(1);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentPair, handleSelect, handleAddToFavorites]);
 
   if (isLoading || !isReady) {
     return (

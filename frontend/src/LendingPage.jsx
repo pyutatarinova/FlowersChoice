@@ -2,14 +2,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Leaf, Zap, Gift, User, Heart, ChevronDown, 
-  Sparkles, Droplets, Sun, Wind, Calendar, 
-  Award, Shield, Brain, MessageCircle, 
-  ArrowRight, Star, Trees, Flower2, 
-  CheckCircle, HelpCircle, Bot, Palette
+  Sparkles, Droplets, Calendar, 
+  Award, Shield, Brain, 
+  ArrowRight, Trees, 
+  CheckCircle, HelpCircle, Palette
 } from 'lucide-react';
 
-const LandingPage = ({ onStartSelection, onShowAuth }) => {
-  const [scrollProgress, setScrollProgress] = useState(0);
+const LandingPage = ({ onStartSelection }) => {
+  // Note: scrollProgress state kept for potential future use
   const [activeBlossoms, setActiveBlossoms] = useState([]);
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef(null);
@@ -22,15 +22,16 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
       const windowHeight = window.innerHeight;
       const totalHeight = document.body.scrollHeight - windowHeight;
       const progress = Math.min(scrollPosition / totalHeight, 1);
-      setScrollProgress(progress);
+      // Note: progress value can be used for future animations
+      void progress;
       
       // Активируем секции при скролле
       const sections = document.querySelectorAll('[data-blossom-section]');
-      sections.forEach((section, index) => {
+      sections.forEach((section, sectionIndex) => {
         const rect = section.getBoundingClientRect();
         if (rect.top < windowHeight * 0.8 && rect.bottom > 0) {
-          if (!activeBlossoms.includes(index)) {
-            setActiveBlossoms(prev => [...prev, index]);
+          if (!activeBlossoms.includes(sectionIndex)) {
+            setActiveBlossoms(prev => [...prev, sectionIndex]);
           }
         }
       });
@@ -40,32 +41,13 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
     handleScroll();
     
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [activeBlossoms]);
   
 // ======================
 // HERO SECTION — ПОЛНОСТЬЮ ОБНОВЛЕНА
 // ======================
 
   const HeroSection = () => {
-    // Состояние для цветов — расцветают при скролле
-    const [bloomedFlowers, setBloomedFlowers] = useState([]);
-
-    useEffect(() => {
-      const handleBloom = () => {
-        const scrollY = window.scrollY;
-        const heroBottom = window.innerHeight * 0.9; // нижняя граница Hero
-        if (scrollY > 50 && scrollY < heroBottom) {
-          // Чем больше скролл, тем больше цветов
-          const count = Math.min(12, Math.floor(scrollY / 30));
-          setBloomedFlowers(Array.from({ length: count }, (_, i) => i));
-        } else {
-          setBloomedFlowers([]);
-        }
-      };
-
-      window.addEventListener('scroll', handleBloom);
-      return () => window.removeEventListener('scroll', handleBloom);
-    }, []);
 
     return (
       <section
@@ -189,7 +171,7 @@ const LandingPage = ({ onStartSelection, onShowAuth }) => {
               color: "from-emerald-400 to-lime-500",
               delay: 400
             }
-          ].map((principle, index) => (
+          ].map((principle) => (
             <div
               key={principle.id}
               className={`relative bg-white rounded-2xl p-8 shadow-xl border border-emerald-100 hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 ${

@@ -8,6 +8,7 @@ import Header from './components/header/Header';
 // auth
 import AuthModal from './components/auth/AuthModal';
 import LoginModal from './components/auth/LoginModal';
+import AuthRequiredModal from './components/auth/AuthRequiredModal';
 
 // questionnaire
 import QuestionStep from './components/question/QuestionStep';
@@ -73,13 +74,15 @@ const App = () => {
   const [mode, setMode] = useState(null);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
+  // eslint-disable-next-line no-unused-vars
   const [isLoading, setIsLoading] = useState(false);
   const [favorites, setFavorites] = useState([]); 
   const [comparisonPlants, setComparisonPlants] = useState([]); 
   const [showAuthWidget, setShowAuthWidget] = useState(false);
   const [showLoginWidget, setShowLoginWidget] = React.useState(false);
-  const [authUser, setAuthUser] = useState(null);
+  const [showAuthRequired, setShowAuthRequired] = useState(false);
   
+  // eslint-disable-next-line no-unused-vars
   const [userId, setUserId] = useState(null);
   const [myPlants, setMyPlants] = useState([]);
   // (Удалена очистка localStorage при загрузке страницы)
@@ -97,6 +100,11 @@ const App = () => {
   // --- STUBS for plant actions (replace with backend logic if needed) ---
   const addToMyPlants = useCallback(async (plant) => {
     if (!plant || !plant.id) return;
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      setShowAuthRequired(true);
+      return;
+    }
     // Проверяем по id и originalId (на случай разных структур)
     if (myPlants.some(p => p.originalId === plant.id || p.id === plant.id)) return;
     // Унифицируем структуру для MyPlants
@@ -151,6 +159,31 @@ const App = () => {
         console.error('Ошибка обновления оценки растения:', e);
       }
     }
+
+    if (Object.prototype.hasOwnProperty.call(data, 'notes')) {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      try {
+        const response = await fetch('http://localhost:3001/api/update-plant-notes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            plant_id: docId,
+            notes: data.notes
+          })
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+      } catch (e) {
+        console.error('Ошибка обновления заметок растения:', e);
+      }
+    }
   }, []);
 
   const removePlant = useCallback(async (docId) => {
@@ -178,6 +211,7 @@ const App = () => {
     }
   }, []);
 
+  // eslint-disable-next-line no-unused-vars
   const updateUserProfile = useCallback(async (data) => {
     setUserProfile(prev => ({ ...prev, ...data }));
   }, []);
@@ -196,8 +230,8 @@ const App = () => {
         temp: plant.comfort_temp,
         size: plant.mature_size
       },
-      notes: '',
-      rating: 5,
+      notes: plant.notes || '',
+      rating: plant.score || 0,
       wateringSchedule: 7,
       wateringHistory: [new Date()],
       addedAt: new Date()
@@ -260,7 +294,9 @@ const App = () => {
     setStep(1); 
   };
 
-  const handleSetAnswer = (newAnswer) => setAnswers((prev) => ({ ...prev, ...newAnswer }));
+  const handleSetAnswer = useCallback((newAnswer) => {
+    setAnswers((prev) => ({ ...prev, ...newAnswer }));
+  }, []);
 
   const handleGenerate = async () => {
     setIsLoading(true);
@@ -356,7 +392,7 @@ const App = () => {
 <p className="text-center text-sm text-emerald-500 mt-6">Начните с выбора режима.</p>
           </div>
       );
-      case 'questionnaire': 
+      case 'questionnaire': {
           const currentQuestion = currentQuestions[step - 1];
           return (
               <>
@@ -364,11 +400,12 @@ const App = () => {
                   <QuestionStep key={currentQuestion.key} question={currentQuestion} answer={answers} setAnswer={handleSetAnswer} onNext={nextStep} isLastStep={step === totalSteps} />
               </>
           );
+      }
       case 'loading': return <LoadingScreen />;
       case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
-      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
+      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
       case 'manual_selection': return <ManualSelectionScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
-      case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} />;
+      case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
       case 'my_plants': return <MyPlantsScreen myPlants={myPlants} onUpdatePlant={updatePlant} onRemovePlant={removePlant} onNavigate={navigate} />;
       case 'profile': return <ProfileScreen
         userProfile={userProfile}
@@ -535,6 +572,19 @@ const App = () => {
           }}
         />
       )}
+      {showAuthRequired && (
+        <AuthRequiredModal
+          onClose={() => setShowAuthRequired(false)}
+          onLogin={() => {
+            setShowAuthRequired(false);
+            setShowLoginWidget(true);
+          }}
+          onRegister={() => {
+            setShowAuthRequired(false);
+            setShowAuthWidget(true);
+          }}
+        />
+      )}
       {userId && (
         <div className="p-4 text-center text-xs text-gray-400">
           {`Текущий ID пользователя: ${userId}`}
@@ -546,4 +596,5 @@ const App = () => {
 
 
 export default App;
+// eslint-disable-next-line react-refresh/only-export-components
 export { getWateringStatus, formatDate };

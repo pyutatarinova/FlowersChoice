@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import WateringCalendarModal from '../../components/my-plants/WateringCalendarModal';
 import { getWateringStatus, formatDate } from '../../App';
@@ -8,17 +8,28 @@ const MyPlantCard = ({ plant, onUpdate, onRemove }) => {
     const { status, isDue, lastWatered } = getWateringStatus(plant.wateringHistory, plant.wateringSchedule);
     const [newNotes, setNewNotes] = useState(plant.notes || '');
     const currentRating = Number.isFinite(Number(plant.rating)) ? Number(plant.rating) : 0;
+    const timeoutRef = useRef(null);
     
     useEffect(() => {
-        const handler = setTimeout(() => {
+        timeoutRef.current = setTimeout(() => {
             if (newNotes !== plant.notes) onUpdate(plant.id, { notes: newNotes });
-        }, 1000);
-        return () => clearTimeout(handler);
+        }, 3000);
+        return () => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        };
     }, [newNotes, plant.notes, plant.id, onUpdate]);
+    
+    const handleNotesBlur = () => {
+        if (timeoutRef.current) clearTimeout(timeoutRef.current);
+        if (newNotes !== plant.notes) onUpdate(plant.id, { notes: newNotes });
+    };
     
     const handleScheduleChange = (event) => onUpdate(plant.id, { wateringSchedule: parseInt(event.target.value, 10) });
     const handleRatingChange = (newRating) => onUpdate(plant.id, { rating: newRating });
-    const handleWatering = () => onUpdate(plant.id, { wateringHistory: arrayUnion(new Date()) });
+    const handleWatering = () => {
+        const wateringHistory = Array.isArray(plant.wateringHistory) ? plant.wateringHistory : [];
+        onUpdate(plant.id, { wateringHistory: [...wateringHistory, new Date()] });
+    };
 
     return (
         <>
@@ -59,7 +70,7 @@ const MyPlantCard = ({ plant, onUpdate, onRemove }) => {
                     {[1, 2, 3, 4, 5].map(rating => <Star key={rating} className={`w-6 h-6 cursor-pointer transition-colors ${currentRating >= rating ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} onClick={() => handleRatingChange(rating)}/>)}
                     <span className="text-sm text-emerald-500 ml-2">({currentRating} из 5)</span>
                 </div>
-                <textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} placeholder="Ваши заметки..." rows="4" className="w-full p-2 border border-emerald-300 rounded-lg focus:ring-lime-500 focus:border-lime-500 transition-all text-sm"/>
+                <textarea value={newNotes} onChange={(e) => setNewNotes(e.target.value)} onBlur={handleNotesBlur} placeholder="Ваши заметки..." rows="4" className="w-full p-2 border border-emerald-300 rounded-lg focus:ring-lime-500 focus:border-lime-500 transition-all text-sm"/>
             </div>
         </div>
         </>
