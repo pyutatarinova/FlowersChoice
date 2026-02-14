@@ -20,19 +20,18 @@
 При запуске есть параметры, можно указать --batch-size 64
 
 """
+
 from __future__ import annotations
 
+import argparse
 import os
 import sys
-import argparse
-import math
 from typing import List, Tuple
 
-from dotenv import load_dotenv
-from sentence_transformers import SentenceTransformer
 import numpy as np
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 
 # print(os.getcwd())
@@ -40,11 +39,11 @@ from tqdm import tqdm
 
 # DB конфиг
 
-DB_HOST = os.environ.get('DB_HOST')
-DB_PORT = os.environ.get('DB_PORT')
-DB_NAME = os.environ.get('DB_NAME')
-DB_USER = os.environ.get('DB_USER')
-DB_PASS = os.environ.get('DB_PASS')
+DB_HOST = os.environ.get("DB_HOST")
+DB_PORT = os.environ.get("DB_PORT")
+DB_NAME = os.environ.get("DB_NAME")
+DB_USER = os.environ.get("DB_USER")
+DB_PASS = os.environ.get("DB_PASS")
 
 
 def _validate_db_config():
@@ -62,24 +61,20 @@ def _validate_db_config():
 
 
 def get_connection():
-    dsn = (
-        f"host={DB_HOST} port={DB_PORT} dbname={DB_NAME} user={DB_USER} password={DB_PASS}"
-    )
+    dsn = f"host={DB_HOST} port={DB_PORT} dbname={DB_NAME} user={DB_USER} password={DB_PASS}"
     return psycopg2.connect(dsn)
 
 
 def embeddings_already_filled(conn) -> bool:
     """Return True if `plants.embedding` exists and has no NULL values."""
     with conn.cursor() as cur:
-        cur.execute(
-            """
+        cur.execute("""
             SELECT 1
             FROM information_schema.columns
             WHERE table_schema='public'
               AND table_name='plants'
               AND column_name='embedding';
-            """
-        )
+            """)
         has_embedding_column = cur.fetchone() is not None
         if not has_embedding_column:
             return False
@@ -101,7 +96,7 @@ def fetch_all_rows(conn) -> Tuple[List[dict], List[int]]:
 def make_combined_text_from_row(row: dict) -> str:
     """Объединяет name и все поля из JSONB features в один текст"""
     parts = []
-    
+
     # Добавляем name из поля features.plant_name_eng
     features = row.get("features")
     if features and isinstance(features, dict):
@@ -109,23 +104,23 @@ def make_combined_text_from_row(row: dict) -> str:
         name = features.get("plant_name_eng")
         if name and str(name).strip():
             parts.append(f"name: {name}")
-        
+
         # Фильтруем ключи: либо заканчиваются на _eng, либо входят в разрешенный список
         allowed_keys = {"min_temp", "max_temp", "comfort_temp", "misting", "flowerin", "fragrance"}
-        
+
         for key, value in features.items():
             # Пропускаем plant_name_eng, так как оно уже обработано как name
             if key == "plant_name_eng":
                 continue
-                
+
             # Проверяем, подходит ли ключ под критерии
             is_allowed_key = key in allowed_keys or key.endswith("_eng")
-            
+
             if is_allowed_key and value is not None:
                 s = str(value).strip()
                 if s and s.lower() != "nan":
                     parts.append(f"{key}: {s}")
-    
+
     return ". ".join(parts)  # name: Красная роза. description: Красивая красная роза. price: 250.0
 
 
@@ -139,7 +134,9 @@ def ensure_pgvector_and_column(conn, dim: int) -> None:
             print("⚠️  Не удалось создать расширение vector (возможно недостаточно прав). Продолжаю...")
 
         # Проверяем существование колонки
-        cur.execute("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='plants' AND column_name='embedding';")
+        cur.execute(
+            "SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='plants' AND column_name='embedding';"
+        )
         if cur.fetchone() is None:
             print(f"➕ Колонка embedding не найдена — добавляю vector({dim})")
             cur.execute(f"ALTER TABLE public.plants ADD COLUMN IF NOT EXISTS embedding vector({dim});")
@@ -155,12 +152,11 @@ def update_embeddings(conn, ids: List, embeddings: np.ndarray, batch_commit: boo
     Ожидается: embeddings.shape == (len(ids), dim)
     Запись использует литерал строки '[v1,v2,...]' и каст -> %s::vector
     """
-    n = len(ids)
     with conn.cursor() as cur:
         for i, _id in enumerate(ids):
             emb = embeddings[i]
             # Форматируем в строку — постгресный вектор ожидает что-то вроде '[0.1,0.2,...]'
-            arr_literal = '[' + ','.join(f"{float(x):.10f}" for x in emb.tolist()) + ']'
+            arr_literal = "[" + ",".join(f"{float(x):.10f}" for x in emb.tolist()) + "]"
             cur.execute("UPDATE public.plants SET embedding = %s::vector WHERE id = %s;", (arr_literal, _id))
 
     if batch_commit:
@@ -248,5 +244,3 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print("YEAH")
     main(batch_size=args.batch_size, dry_run=args.dry_run)
-
-
