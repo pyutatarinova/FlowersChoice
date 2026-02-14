@@ -67,7 +67,7 @@ npm run dev
         Write-Host "=== ALL SERVICES STARTED ===" -ForegroundColor Green
         Write-Host ""
         Write-Host "Available services:" -ForegroundColor White
-        Write-Host "  - DB:      http://localhost:5432" -ForegroundColor Cyan
+        Write-Host "  - DB:      http://localhost:5001" -ForegroundColor Cyan
         Write-Host "  - MinIO:   http://localhost:9000" -ForegroundColor Cyan
         Write-Host "  - Backend: http://localhost:3001" -ForegroundColor Cyan
         Write-Host "  - Frontend: http://localhost:5173" -ForegroundColor Cyan

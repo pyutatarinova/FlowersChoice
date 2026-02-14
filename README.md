@@ -1,83 +1,212 @@
-# Быстрый старт одной командой
-Откройте PowerShell в корневой папке проекта  
-  
-Запустите все сервисы:  
+# 🌿 Flowers'Choice - Plants ML Web App
 
-```
-.\run-app.ps1 start
-```  
-Для запуска только инфраструктуры (БД + MinIO):  
+Веб-приложение для работы с базой растений с поддержкой семантического поиска (эмбеддинги через `sentence-transformers`), хранением изображений в MinIO и PostgreSQL в качестве основной БД.
 
-```
-.\run-app.ps1 start -Infra
-```
+---
 
-# Что нужно доставить для запуска FRONT
+# 🚀 Pipeline запуска проекта
 
-- Скачать node.js
-- Установить npm
-- Перейти в директорию frontend и выполнить команды:
-    - npm install
-    - npm install express
-    - npm install cors
-- Создать в директории /frontend/src файл userProfile.json. 
-В него будет складываться пользовательская информация от регистрации.
-Помимо этого в логах сервера будет также выводиться пользовательская информация.
-- Выполнить запуск сервера(бэкенд)
-    - node server.js
-- Выполнить запуск фронта
-    - npm run install
+## 1️⃣ Требования
 
-# Как создать виртуальное окружение?
-```
-python -m venv venv
-venv\Scripts\Activate.ps1
+* Docker
+* Docker Compose
+* 8+ GB RAM (рекомендуется, из-за ML-модели)
+* Наличие в корне проекта файла .env с содержимым, соответствующим шаблону:
+```yaml
+DB_USER=postgres
+DB_PASS=postgres  
+DB_NAME=flowersdb
+DB_PORT=5001
 ```
 
-# Что нужно доставить для запуска Backend
-1) Создать виртуальное окружение с именем venv командной:
-    python -m venv venv
-2) Установить в виртуальное окружение все необходимые библиотеки командой:
-    pip install -r requirements.txt
-3) Запустить сервер командой:
-    python server.py
+---
 
-# Быстрый старт с помощью файла запуска
-**Быстрый запуск одной командой**  
-Откройте PowerShell в корневой папке проекта  
-  
-Запустите все сервисы:  
+## 2️⃣ Первый запуск
+
+```bash
+docker compose build --no-cache
+docker compose up
+```
+
+После запуска сервисы будут доступны:
+
+| Сервис        | URL                                            |
+| ------------- | ---------------------------------------------- |
+| Frontend      | [http://localhost:5173](http://localhost:5173) |
+| Backend API   | [http://localhost:3001](http://localhost:3001) |
+| MinIO API     | [http://localhost:9000](http://localhost:9000) |
+| MinIO Console | [http://localhost:9001](http://localhost:9001) |
+| PostgreSQL    | localhost:DB_PORT                              |
+
+---
+
+## 3️⃣ Что происходит под капотом при запуске
+
+### 🔹 Шаг 1 — сборка backend-образа
+
+Во время `docker compose build`:
+
+1. Устанавливается CPU-версия `torch`
+2. Устанавливаются зависимости из `requirements.txt`
+3. Скачивается модель:
+
+   ```
+   intfloat/multilingual-e5-base
+   ```
+4. Модель сохраняется внутри контейнера (`/models`)
+5. Копируется backend-код
+
+---
+
+### 🔹 Шаг 2 — запуск контейнеров
+
+`docker compose up` поднимает:
+
+* `postgres` — база данных
+* `minio` — S3-хранилище изображений
+* `backend` — Flask API
+* `frontend` — клиентское приложение
+
+---
+
+### 🔹 Шаг 3 — entrypoint backend
+
+При старте backend:
+
+1. ⏳ Ожидает готовности БД (wait-for-db)
+2. 📦 При необходимости:
+
+   * загружает изображения в MinIO
+   * обновляет ссылки в БД
+3. 🧠 Загружает ML-модель
+4. 🚀 Запускает API сервер
+
+---
+
+# 📂 Структура проекта
 
 ```
-.\run-app.ps1 start
-```  
-Для запуска только инфраструктуры (БД + MinIO):  
+project-root/
+│
+├── docker-compose.yml
+├── .env
+│
+├── backend/
+│   ├── server.py
+│   ├── entrypoint.sh
+│   ├── requirements.txt
+│   └── ...
+│
+├── ml_services/
+│   ├── create_embed.py
+│   ├── plant_repository.py
+│   └── ...
+│
+├── frontend/
+│   ├── src/
+│   ├── package.json
+│   └── ...
+│
+├── minio/
+│   └── upload_and_update_db.py
+│
+│
+└── README.md
+```
+
+---
+
+# 🧠 ML-часть
+
+Используется модель:
 
 ```
-.\run-app.ps1 start -Infra
+intfloat/multilingual-e5-base
 ```
-**Доступные команды**  
-Команда	Описание  
+
+Она:
+
+* поддерживает мультиязычный поиск
+* генерирует embeddings
+* работает на CPU
+
+Модель предзагружается при сборке Docker-образа, поэтому при запуске не скачивается повторно.
+
+---
+
+# 🔁 Повторный запуск
+
+```bash
+docker compose down
+docker compose up
 ```
-.\run-app.ps1 start	        # Запустить все сервисы  
-.\run-app.ps1 start -Infra	# Только БД и MinIO  
-.\run-app.ps1 stop	        # Остановить все  
-.\run-app.ps1 stop -Infra	# Остановить инфраструктуру  
-.\run-app.ps1 status	    # Статус всех сервисов  
-.\run-app.ps1 restart	    # Перезапустить все
-```  
 
-После запуска будут доступны:  
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:3001
-- База данных: http://localhost:5001
-- MinIO (хранилище): http://localhost:9000
-- Логин MinIO: minioadmin / minioadmin
+Данные сохраняются благодаря volumes:
 
-**Структура проекта**  
-FlowersChoice/  
-├── run-app.ps1          ← основной скрипт запуска  
-├── DB/                  ← база данных (Docker)  
-├── minio/               ← объектное хранилище (Docker)  
-├── backend/             ← Python Flask бэкенд  
-└── frontend/            ← React/Vue фронтенд  
+* volume Minio `minio_data`
+* volume PostgreSQL `postgres_data`
+
+---
+
+# 🧪 Полезные команды
+
+### Посмотреть логи backend
+
+```bash
+docker logs plants_backend
+```
+
+### Зайти внутрь контейнера
+
+```bash
+docker exec -it plants_backend bash
+```
+
+### Проверить запущенные контейнеры
+
+```bash
+docker ps
+```
+
+---
+
+# ⚙️ Переменные окружения
+
+Backend использует:
+
+```
+DB_HOST
+DB_PORT
+DB_NAME
+DB_USER
+DB_PASS
+
+MINIO_ENDPOINT
+MINIO_PUBLIC_ENDPOINT
+MINIO_ROOT_USER
+MINIO_ROOT_PASSWORD
+```
+
+---
+
+# 📈 Возможные направления масштабирования
+
+* Повысить качество ML сервиса
+* Добавить Nginx reverse proxy и перевести Frontend в prod
+* Развернуть на VPS с публичным IP
+* Перевести MinIO в production-mode
+
+---
+
+# 📌 Кратко
+
+Проект реализует:
+
+* ML-поиск по тексту
+* Хранение изображений через S3
+* Docker-оркестрацию
+* CPU-инференс модели
+* Полноценную изолированную инфраструктуру
+
+---
+```

@@ -35,8 +35,8 @@ import boto3
 from botocore.client import Config
 import psycopg2
 import mimetypes
-
-load_dotenv()
+# print(os.getcwd())
+# load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 
@@ -47,6 +47,7 @@ def parse_args():
     p = argparse.ArgumentParser(description="Upload images to Minio and update plants.features.photo")
     p.add_argument('--dir', required=True, help='Directory with photos')
     p.add_argument('--minio-endpoint', default=os.environ.get('MINIO_ENDPOINT', 'http://localhost:9000'))
+    p.add_argument('--minio-public-endpoint', default=os.environ.get('MINIO_PUBLIC_ENDPOINT', 'http://localhost:9000'))
     p.add_argument('--minio-access', default=os.environ.get('MINIO_ROOT_USER'))
     p.add_argument('--minio-secret', default=os.environ.get('MINIO_ROOT_PASSWORD'))
     p.add_argument('--bucket', default='plants')
@@ -116,7 +117,33 @@ def connect_db(host, port, dbname, user, password):
     return conn
 
 
+def photos_already_filled(conn) -> bool:
+    """Return True if every row in plants has non-empty features.photo."""
+    with conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT NOT EXISTS (
+                SELECT 1
+                FROM plants
+                WHERE features IS NULL
+                   OR NOT (features ? 'photo')
+                   OR NULLIF(BTRIM(features->>'photo'), '') IS NULL
+            );
+            """
+        )
+        return bool(cur.fetchone()[0])
+
+
 def upload_and_update(args):
+    conn = connect_db(args.db_host, args.db_port, args.db_name, args.db_user, args.db_pass)
+    cur = conn.cursor()
+
+    if photos_already_filled(conn):
+        logging.info('All plants already have non-null features.photo - skipping script.')
+        cur.close()
+        conn.close()
+        return
+
     # Configure S3 client for Minio
     s3 = boto3.client(
         's3',
@@ -127,9 +154,6 @@ def upload_and_update(args):
     )
 
     ensure_bucket(s3, args.bucket, args.minio_endpoint, args.minio_access, args.minio_secret)
-
-    conn = connect_db(args.db_host, args.db_port, args.db_name, args.db_user, args.db_pass)
-    cur = conn.cursor()
 
     results = {}
 
@@ -190,7 +214,7 @@ def upload_and_update(args):
             logging.error('Failed to upload %s: %s', entry, e)
             continue
 
-        public_url = build_public_url(args.minio_endpoint, args.bucket, object_key)
+        public_url = build_public_url(args.minio_public_endpoint, args.bucket, object_key)
 
         # Update features JSONB: set photo field
         try:
