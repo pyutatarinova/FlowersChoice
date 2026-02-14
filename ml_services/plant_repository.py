@@ -261,22 +261,27 @@ class PlantRepository:
             with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
                 cur.execute(
                     f"""
-                    SELECT p.id, p.name, p.features, up.score, up.features->>'notes' as notes
+                    SELECT p.id, p.name, p.features, up.score, up.features as user_features
                     FROM user_plants up
                     JOIN plants p ON p.id = up.plant_id
                     WHERE up.user_id = %s AND up.{flag_column} = TRUE
                 """,
                     (user_id,),
                 )
+
                 rows = cur.fetchall()
+
                 results = []
                 for r in rows:
+                    user_features = r.get("user_features") or {}
+                    notes = user_features.get("notes", "") if isinstance(user_features, dict) else ""
+
                     plant = {
                         "id": int(r["id"]),
                         "name": r.get("name"),
                         "features": r.get("features"),
                         "score": float(r.get("score")) if r.get("score") is not None else 0.0,
-                        "notes": r.get("notes") or "",
+                        "notes": notes,
                     }
                     results.append(plant)
 
@@ -393,7 +398,9 @@ class PlantRepository:
                 conn.commit()
 
     def update_plant_notes(self, user_id: int, plant_id: int, notes: str) -> None:
-        """Update notes for a plant in user_plants features JSONB.
+        """Update notes for a plant in user_plants table.
+
+        Saves notes in the features JSONB field with key 'notes'.
 
         Args:
             user_id: User ID
@@ -417,15 +424,12 @@ class PlantRepository:
                 if not cur.fetchone():
                     raise Exception(f"Plant record not found for user_id={user_id}, plant_id={plant_id}")
 
-                # Update notes in features JSONB
+                # Update notes in features JSONB field
+                # Use jsonb_set to update nested field, or create features if NULL
                 cur.execute(
                     """
                     UPDATE user_plants
-                    SET features = jsonb_set(
-                        COALESCE(features, '{}'::jsonb),
-                        '{notes}',
-                        to_jsonb(%s::text)
-                    )
+                    SET features = COALESCE(features, '{}'::jsonb) || jsonb_build_object('notes', %s)
                     WHERE user_id = %s AND plant_id = %s
                 """,
                     (notes, user_id, plant_id),
