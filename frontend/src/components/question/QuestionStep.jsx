@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 
 const QuestionStep = ({ question, answer, setAnswer, onNext, isLastStep }) => {
@@ -6,7 +6,7 @@ const QuestionStep = ({ question, answer, setAnswer, onNext, isLastStep }) => {
   const [textAreaValue, setTextAreaValue] = useState(initialData.text);
   const [selectedTags, setSelectedTags] = useState(initialData.tags);
 
-  // Сохраняем автоматически при изменении
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     setAnswer({
       [question.key]: {
@@ -14,7 +14,8 @@ const QuestionStep = ({ question, answer, setAnswer, onNext, isLastStep }) => {
         tags: selectedTags
       }
     });
-  }, [textAreaValue, selectedTags]);
+  }, [question.key]);
+  /* eslint-enable react-hooks/exhaustive-deps */
   
   const toggleTag = (tag) => {
     setSelectedTags(prev => 
@@ -28,15 +29,14 @@ const QuestionStep = ({ question, answer, setAnswer, onNext, isLastStep }) => {
   const buttonText = isLastStep ? 'Сгенерировать подборку' : 'Далее';
 
   const handleNextClick = () => {
-    // ❗ ГАРАНТИРУЕМ СОХРАНЕНИЕ ПЕРЕД ПЕРЕХОДОМ
+    // Сохраняем текущие ответы перед переходом
     setAnswer({
       [question.key]: {
         text: textAreaValue,
         tags: selectedTags
       }
     });
-
-    // Теперь можно переходить
+    // Переходим на следующий вопрос
     onNext();
   };
 

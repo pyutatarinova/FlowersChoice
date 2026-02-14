@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import WateringCalendarModal from '../../components/my-plants/WateringCalendarModal';
 import { getWateringStatus, formatDate } from '../../App';
@@ -18,7 +18,10 @@ const MyPlantCard = ({ plant, onUpdate, onRemove }) => {
     
     const handleScheduleChange = (event) => onUpdate(plant.id, { wateringSchedule: parseInt(event.target.value, 10) });
     const handleRatingChange = (newRating) => onUpdate(plant.id, { rating: newRating });
-    const handleWatering = () => onUpdate(plant.id, { wateringHistory: arrayUnion(new Date()) });
+    const handleWatering = () => {
+        const wateringHistory = Array.isArray(plant.wateringHistory) ? plant.wateringHistory : [];
+        onUpdate(plant.id, { wateringHistory: [...wateringHistory, new Date()] });
+    };
 
     return (
         <>

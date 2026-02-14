@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import ComparisonCard from '../../components/comparison/ComparisonCard';
 
@@ -10,6 +10,38 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
     const [leftPlant, setLeftPlant] = useState(selectedPlants[0]);
     const [rightPlant, setRightPlant] = useState(selectedPlants.length > 1 ? selectedPlants[1] : null);
     const [nextIndex, setNextIndex] = useState(2);
+
+    const handleAddWinnerToMyPlants = async (plant) => {
+        onAddToMyPlants(plant);
+        
+        try {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                alert('Необходимо авторизоваться');
+                return;
+            }
+            
+            const response = await fetch('http://localhost:3001/api/add-my-plant', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    plant_id: plant.id
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP ${response.status}`);
+            }
+            
+        } catch (error) {
+            console.error('Error adding winner to my plants:', error);
+            alert('Ошибка при добавлении растения');
+        }
+    };
 
     const handleChoice = (chosenPlant) => {
         const loserPlant = chosenPlant.id === leftPlant.id ? rightPlant : leftPlant;
@@ -67,7 +99,7 @@ const ComparisonScreen = ({ selectedPlants, onFinishComparison, onAddToMyPlants 
             </div>
 
             <button
-                onClick={() => { onAddToMyPlants(finalWinner); onFinishComparison(); }}
+                onClick={() => { handleAddWinnerToMyPlants(finalWinner); onFinishComparison(); }}
                 className="w-full py-3 px-6 bg-emerald-500 text-white font-bold rounded-xl hover:bg-emerald-600 transition"
             >
                 Добавить в Мои растения

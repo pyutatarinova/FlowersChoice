@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import FinalModal from '../../components/results/FinalModal';
 import FlowerResultCard from '../../components/results/FlowerResultCard';
@@ -26,6 +26,7 @@ const ResultsScreen = ({ favorites, setFavorites, onNavigate }) => {
         const result = await response.json();
         setFavorites(prev => [...prev, plant]);
         if (response.ok) {
+          // Успешно добавлено в избранное
         } else {
           // Можно показать ошибку пользователю, если нужно
           console.error(result.message || 'Ошибка при добавлении в избранное');

@@ -73,13 +73,14 @@ const App = () => {
   const [mode, setMode] = useState(null);
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
+  // eslint-disable-next-line no-unused-vars
   const [isLoading, setIsLoading] = useState(false);
   const [favorites, setFavorites] = useState([]); 
   const [comparisonPlants, setComparisonPlants] = useState([]); 
   const [showAuthWidget, setShowAuthWidget] = useState(false);
   const [showLoginWidget, setShowLoginWidget] = React.useState(false);
-  const [authUser, setAuthUser] = useState(null);
   
+  // eslint-disable-next-line no-unused-vars
   const [userId, setUserId] = useState(null);
   const [myPlants, setMyPlants] = useState([]);
   // (Удалена очистка localStorage при загрузке страницы)
@@ -178,6 +179,7 @@ const App = () => {
     }
   }, []);
 
+  // eslint-disable-next-line no-unused-vars
   const updateUserProfile = useCallback(async (data) => {
     setUserProfile(prev => ({ ...prev, ...data }));
   }, []);
@@ -260,7 +262,9 @@ const App = () => {
     setStep(1); 
   };
 
-  const handleSetAnswer = (newAnswer) => setAnswers((prev) => ({ ...prev, ...newAnswer }));
+  const handleSetAnswer = useCallback((newAnswer) => {
+    setAnswers((prev) => ({ ...prev, ...newAnswer }));
+  }, []);
 
   const handleGenerate = async () => {
     setIsLoading(true);
@@ -356,7 +360,7 @@ const App = () => {
 <p className="text-center text-sm text-emerald-500 mt-6">Начните с выбора режима.</p>
           </div>
       );
-      case 'questionnaire': 
+      case 'questionnaire': {
           const currentQuestion = currentQuestions[step - 1];
           return (
               <>
@@ -364,6 +368,7 @@ const App = () => {
                   <QuestionStep key={currentQuestion.key} question={currentQuestion} answer={answers} setAnswer={handleSetAnswer} onNext={nextStep} isLastStep={step === totalSteps} />
               </>
           );
+      }
       case 'loading': return <LoadingScreen />;
       case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
       case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
@@ -546,4 +551,5 @@ const App = () => {
 
 
 export default App;
+// eslint-disable-next-line react-refresh/only-export-components
 export { getWateringStatus, formatDate };

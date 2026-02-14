@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import FavoriteItem from '../../components/favorites/FavoriteItem';
 
@@ -15,17 +15,22 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate }) => {
         alert('Необходимо авторизоваться');
         return;
       }
-
+      
       const response = await fetch('http://localhost:3001/api/add-my-plant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ plant_id: plant.id })
+        body: JSON.stringify({
+          plant_id: plant.id
+        })
       });
-
-      const result = await response.json();
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
       
     } catch (error) {
       console.error('Error adding plant to my plants:', error);

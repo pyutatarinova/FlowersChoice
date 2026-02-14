@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 
 function LoginModal({ onClose, onLogin }) {
@@ -33,7 +33,7 @@ function LoginModal({ onClose, onLogin }) {
         const err = await res.json();
         setError(err.message || 'Ошибка входа.');
       }
-    } catch (e) {
+    } catch {
       setError('Ошибка соединения с сервером.');
     }
   };
