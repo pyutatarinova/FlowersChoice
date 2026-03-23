@@ -67,7 +67,7 @@ const ManualSelectionScreen = ({ favorites, setFavorites }) => {
       setIsLoading(true);
       try {
         if (!manualLoadPromise) {
-          manualLoadPromise = fetch('http://localhost:3001/api/plants-rating?page=1&per_page=50')
+          manualLoadPromise = fetch('/api/plants-rating?page=1&per_page=50')
             .then(res => res.json())
             .then(data => {
               if (data && data.success && Array.isArray(data.plants) && data.plants.length > 0) {
@@ -143,7 +143,7 @@ const ManualSelectionScreen = ({ favorites, setFavorites }) => {
     if (!alreadyFavorite) {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await fetch('http://localhost:3001/api/savefavourites', {
+        const response = await fetch('/api/savefavourites', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -230,3 +230,4 @@ const ManualSelectionScreen = ({ favorites, setFavorites }) => {
 };
 
 export default ManualSelectionScreen;
+

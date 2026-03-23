@@ -77,7 +77,7 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
           params.set('toxicity', toxicityFilter.trim());
         }
 
-        const response = await fetch(`http://127.0.0.1:3001/api/plants-rating/filter?${params.toString()}`);
+        const response = await fetch(`/api/plants-rating/filter?${params.toString()}`);
         const data = await response.json();
 
         if (!response.ok || !data?.success) {
@@ -151,7 +151,7 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
         headers.Authorization = `Bearer ${token}`;
       }
 
-      const response = await fetch('http://127.0.0.1:3001/api/savefavourites', {
+      const response = await fetch('/api/savefavourites', {
         method: 'POST',
         headers,
         body: JSON.stringify({ plant_id: plant.id }),
@@ -428,3 +428,4 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
 };
 
 export default RatingsScreen;
+
