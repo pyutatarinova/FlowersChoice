@@ -4,3 +4,4 @@
 **/.git
 **/.env
 **/ml_venv
+**/.env.prod
