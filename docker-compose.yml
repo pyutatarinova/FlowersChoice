@@ -7,8 +7,6 @@ services:
   db:
     image: ramsrib/pgvector:15
     container_name: pgvector_postgres
-    env_file:
-      - .env
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
@@ -19,7 +17,7 @@ services:
     restart: unless-stopped
 
   # -----------------------
-  # MinIO (internal only)
+  # MinIO (base service)
   # -----------------------
   minio:
     image: minio/minio:latest
@@ -33,7 +31,7 @@ services:
     restart: unless-stopped
 
   # -----------------------
-  # Backend + ML (internal only)
+  # Backend + ML (base service)
   # -----------------------
   backend:
     build:
@@ -43,8 +41,6 @@ services:
     depends_on:
       - db
       - minio
-    env_file:
-      - .env
     environment:
       DB_HOST: db
       DB_PORT: 5432
@@ -60,24 +56,4 @@ services:
       - ./minio/images:/app/minio_images
     expose:
       - "3001"
-    restart: unless-stopped
-
-  # -----------------------
-  # Nginx + Frontend (production)
-  # -----------------------
-  web:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile.prod
-      args:
-        VITE_SITE_URL: ${SITE_URL}
-        VITE_API_BASE_URL: ${SITE_URL}
-    container_name: flowerschoice_web
-    depends_on:
-      - backend
-      - minio
-    environment:
-      SITE_IP: ${SITE_IP}
-    ports:
-      - "80:80"
     restart: unless-stopped
