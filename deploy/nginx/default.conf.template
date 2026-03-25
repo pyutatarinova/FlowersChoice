@@ -15,8 +15,8 @@ server {
     listen 443 ssl;
     server_name ${SITE_DOMAIN} ${SITE_IP};
 
-    ssl_certificate /etc/letsencrypt/live/${SITE_DOMAIN}/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/${SITE_DOMAIN}/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/${SITE_CERT_NAME}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${SITE_CERT_NAME}/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
     ssl_session_cache shared:SSL:10m;

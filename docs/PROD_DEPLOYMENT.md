@@ -16,6 +16,7 @@
 - `SITE_IP=178.72.179.125`
 - `SITE_DOMAIN=flowers-choice.ru`
 - `SITE_URL=https://flowers-choice.ru`
+- `SITE_CERT_NAME=flowers-choice.ru-0001`
 - `DB_PASS`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `JWT_SECRET` — должны быть уникальными
 
 ## Запуск
@@ -47,6 +48,14 @@ docker run --rm -it \
 
 ```bash
 docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate web
+```
+
+Если `certbot certificates` показывает только `flowers-choice.ru-0001`, это нормально: укажи именно это имя в `.env.prod` через `SITE_CERT_NAME`.
+
+Если видишь ошибку `renewal config file .../flowers-choice.ru.conf ... missing a required file reference`, убери битый renewal-файл:
+
+```bash
+rm -f ~/FlowersChoice/certbot/conf/renewal/flowers-choice.ru.conf
 ```
 
 Примечание: до выпуска Let's Encrypt контейнер `web` поднимется с временным self-signed сертификатом (это ожидаемо).

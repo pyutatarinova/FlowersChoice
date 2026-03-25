@@ -15,6 +15,7 @@ services:
     environment:
       SITE_IP: ${SITE_IP}
       SITE_DOMAIN: ${SITE_DOMAIN}
+      SITE_CERT_NAME: ${SITE_CERT_NAME}
     ports:
       - "80:80"
       - "443:443"
