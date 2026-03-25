@@ -13,6 +13,14 @@ function AuthModal({ onClose, onRegister }) {
   });
   const [error, setError] = useState('');
 
+  const isPasswordValid = (password) => {
+    if (typeof password !== 'string') return false;
+    if (password.length < 6) return false;
+    const hasLetter = /\p{L}/u.test(password);
+    const hasDigit = /\p{N}/u.test(password);
+    return hasLetter && hasDigit;
+  };
+
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setForm((prev) => ({
@@ -21,19 +29,26 @@ function AuthModal({ onClose, onRegister }) {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.password) {
       setError('Пожалуйста, заполните все обязательные поля.');
       return;
     }
+    if (!isPasswordValid(form.password)) {
+      setError('Пароль должен быть не короче 6 символов и содержать буквы и цифры.');
+      return;
+    }
     setError('');
-    onRegister(form);
+    const result = await onRegister(form);
+    if (result && result.success === false) {
+      setError(result.message || 'Ошибка регистрации');
+    }
   };
 
   return (
     <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/40 p-4">
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl text-left">
+      <form onSubmit={handleSubmit} noValidate className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl text-left">
         <h3 className="text-2xl font-bold text-emerald-800 mb-4 text-center">Регистрация пользователя</h3>
         <div className="mb-3">
           <label className="block text-sm font-medium text-gray-700 mb-1">Имя *</label>
@@ -45,7 +60,16 @@ function AuthModal({ onClose, onRegister }) {
         </div>
         <div className="mb-3">
           <label className="block text-sm font-medium text-gray-700 mb-1">Пароль *</label>
-          <input type="password" name="password" value={form.password} onChange={handleChange} className="w-full p-2 border border-gray-300 rounded-lg" required />
+          <input
+            type="password"
+            name="password"
+            value={form.password}
+            onChange={handleChange}
+            className="w-full p-2 border border-gray-300 rounded-lg"
+            minLength={6}
+            title="Минимум 6 символов, обязательно буквы и цифры"
+            required
+          />
         </div>
         <div className="mb-3">
           <label className="block text-sm font-medium text-gray-700 mb-1">Есть ли у вас дети?</label>
