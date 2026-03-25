@@ -1,7 +1,6 @@
 version: "3.9"
 
 services:
-
   # -----------------------
   # PostgreSQL + pgvector
   # -----------------------
@@ -14,32 +13,27 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
       POSTGRES_DB: ${DB_NAME}
-    ports:
-      - "${DB_PORT}:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
       - ./DB/init.sql:/docker-entrypoint-initdb.d/init.sql
     restart: unless-stopped
 
   # -----------------------
-  # MinIO
+  # MinIO (internal only)
   # -----------------------
   minio:
     image: minio/minio:latest
     container_name: minio-local
-    ports:
-      - "9000:9000"
-      - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
     volumes:
       - ./minio_data:/data
     command: server /data --console-address ":9001"
     restart: unless-stopped
 
   # -----------------------
-  # Backend + ML
+  # Backend + ML (internal only)
   # -----------------------
   backend:
     build:
@@ -58,27 +52,32 @@ services:
       DB_PASS: ${DB_PASS}
       DB_NAME: ${DB_NAME}
       MINIO_ENDPOINT: http://minio:9000
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
-      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_PUBLIC_ENDPOINT: ${SITE_URL}/minio
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
     volumes:
       - ./minio/images:/app/minio_images
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
     restart: unless-stopped
 
   # -----------------------
-  # Frontend (dev mode)
+  # Nginx + Frontend (production)
   # -----------------------
-  frontend:
-    image: node:20
-    container_name: plants_frontend
-    working_dir: /app
-    volumes:
-      - ./frontend:/app
-    command: sh -c "npm install && npm run dev -- --host"
-    ports:
-      - "5173:5173"
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile.prod
+      args:
+        VITE_SITE_URL: ${SITE_URL}
+        VITE_API_BASE_URL: ${SITE_URL}
+    container_name: flowerschoice_web
     depends_on:
       - backend
+      - minio
+    environment:
+      SITE_IP: ${SITE_IP}
+    ports:
+      - "80:80"
     restart: unless-stopped

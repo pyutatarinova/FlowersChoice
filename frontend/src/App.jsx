@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import LandingPage from './LendingPage';
 
@@ -140,7 +140,7 @@ const App = () => {
       if (!token) return;
 
       try {
-        const response = await fetch('http://localhost:3001/api/update-plant-score', {
+        const response = await fetch('/api/update-plant-score', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -165,7 +165,7 @@ const App = () => {
       if (!token) return;
 
       try {
-        const response = await fetch('http://localhost:3001/api/update-plant-notes', {
+        const response = await fetch('/api/update-plant-notes', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -191,7 +191,7 @@ const App = () => {
 
   try {
     if (token) {
-      await fetch('http://localhost:3001/api/remove-plant', {
+      await fetch('/api/remove-plant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -246,7 +246,7 @@ const App = () => {
     }
 
     try {
-      const favRes = await fetch('http://localhost:3001/api/userplants', {
+      const favRes = await fetch('/api/userplants', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
@@ -309,7 +309,7 @@ const App = () => {
         headers['Authorization'] = `Bearer ${token}`;
       }
       
-      const response = await fetch("http://localhost:3001/api/search-plants", {
+      const response = await fetch("/api/search-plants", {
         method: "POST",
         headers,
         body: JSON.stringify(answers)
@@ -447,7 +447,7 @@ const App = () => {
             let token = null;
             let result = null;
             try {
-              const res = await fetch('http://localhost:3001/api/register', {
+              const res = await fetch('/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userData, null, 2)
@@ -468,7 +468,7 @@ const App = () => {
             localStorage.setItem('authToken', token);
             // Получаем профиль пользователя через /api/userinfo
             try {
-              const res = await fetch('http://localhost:3001/api/userinfo', {
+              const res = await fetch('/api/userinfo', {
                 headers: { 'Authorization': `Bearer ${token}` }
               });
               const data = await res.json();
@@ -478,7 +478,7 @@ const App = () => {
               }
               
               // Загружаем избранные растения пользователя (для нового пользователя пустой список)
-              const favRes = await fetch('http://localhost:3001/api/userplants', {
+              const favRes = await fetch('/api/userplants', {
                 headers: { 'Authorization': `Bearer ${token}` }
               });
               const favData = await favRes.json();
@@ -530,7 +530,7 @@ const App = () => {
             }
             localStorage.setItem('authToken', token);
             try {
-              const res = await fetch('http://localhost:3001/api/userinfo', {
+              const res = await fetch('/api/userinfo', {
                 headers: { 'Authorization': `Bearer ${token}` }
               });
               const data = await res.json();
@@ -540,7 +540,7 @@ const App = () => {
               }
               
               // Загружаем избранные растения пользователя
-              const favRes = await fetch('http://localhost:3001/api/userplants', {
+              const favRes = await fetch('/api/userplants', {
                 headers: { 'Authorization': `Bearer ${token}` }
               });
               const favData = await favRes.json();

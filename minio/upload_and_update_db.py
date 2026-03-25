@@ -117,8 +117,10 @@ def connect_db(host, port, dbname, user, password):
     return conn
 
 
-def photos_already_filled(conn) -> bool:
-    """Return True if every row in plants has non-empty features.photo."""
+def photos_already_filled(conn, public_endpoint: str) -> bool:
+    """Return True when every row has photo and it already points to current public endpoint."""
+    endpoint_prefix = public_endpoint.rstrip("/") + "/%"
+
     with conn.cursor() as cur:
         cur.execute(
             """
@@ -128,8 +130,10 @@ def photos_already_filled(conn) -> bool:
                 WHERE features IS NULL
                    OR NOT (features ? 'photo')
                    OR NULLIF(BTRIM(features->>'photo'), '') IS NULL
+                   OR features->>'photo' NOT LIKE %s
             );
-            """
+            """,
+            (endpoint_prefix,),
         )
         return bool(cur.fetchone()[0])
 
@@ -138,7 +142,7 @@ def upload_and_update(args):
     conn = connect_db(args.db_host, args.db_port, args.db_name, args.db_user, args.db_pass)
     cur = conn.cursor()
 
-    if photos_already_filled(conn):
+    if photos_already_filled(conn, args.minio_public_endpoint):
         logging.info('All plants already have non-null features.photo - skipping script.')
         cur.close()
         conn.close()

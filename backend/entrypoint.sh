@@ -25,5 +25,5 @@ python /app/upload_and_update_db.py \
   --db-pass $DB_PASS
 echo "Creating embeddings..."
 python /app/ml_services/create_embed.py
-echo "Starting Flask server..."
-exec python server.py
+echo "Starting Gunicorn server..."
+exec gunicorn --workers "${GUNICORN_WORKERS:-2}" --bind 0.0.0.0:3001 --timeout 180 server:app

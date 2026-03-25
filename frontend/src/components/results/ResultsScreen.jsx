@@ -15,7 +15,7 @@ const ResultsScreen = ({ favorites, setFavorites, onNavigate }) => {
     if (!isLiked && plant) {
       try {
         const token = localStorage.getItem('authToken');
-        const response = await fetch('http://localhost:3001/api/savefavourites', {
+        const response = await fetch('/api/savefavourites', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

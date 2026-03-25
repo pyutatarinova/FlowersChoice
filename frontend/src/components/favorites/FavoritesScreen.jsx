@@ -16,7 +16,7 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate, onAddToMyPlants,
 
       if (onAddToMyPlants) onAddToMyPlants(plant);
 
-      const response = await fetch('http://localhost:3001/api/add-my-plant', {
+      const response = await fetch('/api/add-my-plant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -42,7 +42,7 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate, onAddToMyPlants,
 
     try {
     if (token) {
-      await fetch('http://localhost:3001/api/remove-plant', {
+      await fetch('/api/remove-plant', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,3 +112,4 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate, onAddToMyPlants,
 };
 
 export default FavoritesScreen;
+
