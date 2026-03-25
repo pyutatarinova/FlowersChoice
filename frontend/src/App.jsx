@@ -445,21 +445,25 @@ const App = () => {
           onClose={() => setShowAuthWidget(false)}
           onRegister={async (userData) => {
             let token = null;
+            let result = null;
             try {
               const res = await fetch('http://localhost:3001/api/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(userData, null, 2)
               });
-              const result = await res.json();
-              if (result.success && result.token) {
-                token = result.token;
-              } else {
-                throw new Error(result.message || 'Ошибка регистрации');
+              try {
+                result = await res.json();
+              } catch {
+                result = {};
               }
+              if (!res.ok || !result.success || !result.token) {
+                return { success: false, message: result.message || `HTTP ${res.status}` };
+              }
+              token = result.token;
             } catch (e) {
               console.error('Ошибка сохранения профиля:', e);
-              return;
+              return { success: false, message: e.message || 'Ошибка регистрации' };
             }
             localStorage.setItem('authToken', token);
             // Получаем профиль пользователя через /api/userinfo
@@ -508,6 +512,7 @@ const App = () => {
             }
             setShowAuthWidget(false);
             navigate('home');
+            return { success: true };
           }}
         />
       )}

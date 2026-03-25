@@ -64,6 +64,16 @@ def create_token(user_id, email):
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGO)
 
 
+def is_password_valid(password: str) -> bool:
+    if not isinstance(password, str):
+        return False
+    if len(password) < 6:
+        return False
+    has_letter = any(ch.isalpha() for ch in password)
+    has_digit = any(ch.isdigit() for ch in password)
+    return has_letter and has_digit
+
+
 # -----------------------------
 # Middleware (auth decorator)
 # -----------------------------
@@ -179,6 +189,17 @@ def register():
     profile = request.get_json()
     if not profile or not all(k in profile for k in ["name", "email", "password"]):
         return jsonify({"success": False, "message": "Некорректные данные"}), 400
+
+    if not is_password_valid(profile.get("password")):
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Пароль должен быть не короче 6 символов и содержать буквы и цифры",
+                }
+            ),
+            400,
+        )
 
     encoded_password = base64.b64encode(profile["password"].encode("utf-8")).decode("utf-8")
 
