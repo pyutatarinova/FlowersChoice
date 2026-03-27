@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+﻿import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import LandingPage from './LendingPage';
 
@@ -350,6 +350,7 @@ const App = () => {
     loadUserPlantsData(token);
   }, [loadUserPlantsData]);
 
+  const isGuest = !localStorage.getItem('authToken');
 
   // --- RENDER CONTENT ---
   const renderContent = () => {
@@ -402,9 +403,18 @@ const App = () => {
           );
       }
       case 'loading': return <LoadingScreen />;
-      case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
-      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
-      case 'manual_selection': return <ManualSelectionScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
+      case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} isGuest={isGuest} onShowAuth={(type) => {
+        if (type === 'login') setShowLoginWidget(true);
+        else setShowAuthWidget(true);
+      }} />;
+      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} isGuest={isGuest} onShowAuth={(type) => {
+        if (type === 'login') setShowLoginWidget(true);
+        else setShowAuthWidget(true);
+      }} />;
+      case 'manual_selection': return <ManualSelectionScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} isGuest={isGuest} onShowAuth={(type) => {
+        if (type === 'login') setShowLoginWidget(true);
+        else setShowAuthWidget(true);
+      }} />;
       case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
       case 'my_plants': return <MyPlantsScreen myPlants={myPlants} onUpdatePlant={updatePlant} onRemovePlant={removePlant} onNavigate={navigate} />;
       case 'profile': return <ProfileScreen
