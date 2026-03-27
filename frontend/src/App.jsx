@@ -1,5 +1,5 @@
 ﻿import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
+import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search, MessageCircle } from 'lucide-react';
 import LandingPage from './LendingPage';
 
 // header
@@ -449,6 +449,20 @@ const App = () => {
           </div>
         )}
       </main>
+      <a
+        href="https://forms.gle/xdzJUqN6yhSL3Tib9"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Обратная связь"
+        className="group fixed bottom-6 right-6 z-[1200]"
+      >
+        <span className="flex items-center rounded-full border border-emerald-100 bg-white/95 px-3 py-3 text-emerald-700 shadow-lg shadow-emerald-200/40 backdrop-blur transition-all duration-200 hover:shadow-xl focus-within:shadow-xl">
+    <MessageCircle className="h-5 w-5 text-emerald-600" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-emerald-700 opacity-0 transition-all duration-200 group-hover:max-w-[160px] group-hover:opacity-100 ml-0 group-hover:ml-2">
+      Обратная связь
+        </span>
+      </span>
+      </a>
       {/* Модальное окно регистрации */}
       {showAuthWidget && (
         <AuthModal
