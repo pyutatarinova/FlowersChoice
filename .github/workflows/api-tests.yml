@@ -1,12 +1,9 @@
 name: API tests
 
 on:
+  push:
+  pull_request:
   workflow_dispatch:
-    inputs:
-      ref:
-        description: "Branch to test"
-        required: true
-        default: "deploy"
 
 jobs:
   api-tests:
