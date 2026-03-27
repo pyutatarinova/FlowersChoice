@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { Heart, ChevronRight, Minus, Maximize2, X } from 'lucide-react';
+import PlantShareMenu from '../share/PlantShareMenu';
+import { getPlantPath } from '../../utils/plantLinks';
 
 const StarIcon = ({ fillFraction = 0, uniqueId }) => {
   const clamped = Math.max(0, Math.min(1, fillFraction));
@@ -39,14 +41,27 @@ const formatRating = (ratingValue) => {
   return `${display}/5`;
 };
 
-const RatingPlantCard = ({ plant, isFavorite, onToggleDetails, isDetailed, onAddToFavorites }) => {
+const RatingPlantCard = ({ plant, isFavorite, onToggleDetails, isDetailed, onAddToFavorites, onOpenPlant }) => {
   const rating = Number(plant.avg_score ?? 0);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
+  const plantPath = getPlantPath(plant);
+
+  const handleOpenPlant = (event) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button === 1) {
+      return;
+    }
+    event.preventDefault();
+    if (onOpenPlant) {
+      onOpenPlant(plant);
+      return;
+    }
+    window.location.href = plantPath;
+  };
 
   return (
-    <div className="bg-white rounded-xl shadow-lg border border-emerald-100 mb-4 overflow-hidden">
-      <div className="p-4 flex items-center justify-between">
-        <div className="w-8/12 flex items-center space-x-4">
+    <div className="bg-white rounded-xl shadow-lg border border-emerald-100 mb-4 overflow-visible">
+      <div className="p-4 flex items-center justify-between gap-2">
+        <div className="min-w-0 flex-1 flex items-center gap-3 sm:gap-4">
           <div
             className="relative group cursor-pointer"
             onClick={() => setIsImageExpanded(!isImageExpanded)}
@@ -60,8 +75,15 @@ const RatingPlantCard = ({ plant, isFavorite, onToggleDetails, isDetailed, onAdd
               <Maximize2 className="w-4 h-4 text-white drop-shadow-lg" />
             </div>
           </div>
-          <div>
-            <h4 className="text-lg font-semibold text-emerald-800">{plant.plant_name}</h4>
+          <div className="min-w-0">
+            <a
+              href={plantPath}
+              onClick={handleOpenPlant}
+              className="text-lg font-semibold text-emerald-800 hover:text-lime-600 hover:underline underline-offset-4 transition-colors block truncate"
+              title="Открыть страницу растения"
+            >
+              {plant.plant_name}
+            </a>
 
             <div className="flex items-center mt-1 gap-2">
               <div className="flex">
@@ -75,7 +97,9 @@ const RatingPlantCard = ({ plant, isFavorite, onToggleDetails, isDetailed, onAdd
           </div>
         </div>
 
-        <div className="w-4/12 flex justify-end space-x-2">
+        <div className="shrink-0 flex items-center justify-end gap-2">
+          <PlantShareMenu plant={plant} />
+
           <button
             onClick={onAddToFavorites}
             disabled={isFavorite}

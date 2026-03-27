@@ -475,6 +475,51 @@ class PlantRepository:
 
         return results
 
+    def get_plant_by_id(self, plant_id: int) -> Dict[str, Any] | None:
+        """Get a single plant with aggregated rating stats."""
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        p.id,
+                        p.name,
+                        p.features,
+                        COALESCE(
+                            (
+                                SELECT AVG(up_avg.score)
+                                FROM user_plants up_avg
+                                WHERE up_avg.plant_id = p.id AND up_avg.score IS NOT NULL
+                            ),
+                            0
+                        ) as avg_score,
+                        COALESCE(
+                            (
+                                SELECT COUNT(*)
+                                FROM user_plants up_cnt
+                                WHERE up_cnt.plant_id = p.id AND up_cnt.score IS NOT NULL
+                            ),
+                            0
+                        ) as rating_count
+                    FROM plants p
+                    WHERE p.id = %s
+                    LIMIT 1
+                """,
+                    (plant_id,),
+                )
+                row = cur.fetchone()
+
+        if not row:
+            return None
+
+        return {
+            "id": int(row["id"]),
+            "name": row.get("name"),
+            "features": row.get("features"),
+            "avg_score": float(row.get("avg_score")) if row.get("avg_score") is not None else 0.0,
+            "rating_count": int(row.get("rating_count")) if row.get("rating_count") is not None else 0,
+        }
+
     def get_plants_rating_filtered(
         self,
         search: str | None = None,

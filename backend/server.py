@@ -4,7 +4,6 @@ import os
 
 # import psycopg2
 import random
-import sys
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
@@ -15,9 +14,6 @@ from dotenv import load_dotenv
 from flasgger import Swagger
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-
-# Add ml_services to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "ml_services"))
 
 from plant_repository import PlantRepository
 
@@ -775,6 +771,16 @@ def _build_prompt(search_criteria: dict) -> str: # noqa: C901
     return ". ".join(_dedupe_keep_order(prompt_parts))
 
 
+def _get_plant_features(plant_data: dict) -> dict:
+    features = plant_data.get("features") or {}
+    if isinstance(features, str):
+        try:
+            features = json.loads(features)
+        except json.JSONDecodeError:
+            features = {}
+    return features if isinstance(features, dict) else {}
+
+
 def _format_plant_response(plant_data: dict) -> dict:
     """Format plant data for frontend response with desired fields."""
     desired_features = [
@@ -786,20 +792,13 @@ def _format_plant_response(plant_data: dict) -> dict:
         "photo",
     ]
 
-    features = plant_data.get("features") or {}
-    if isinstance(features, str):
-        try:
-            features = json.loads(features)
-        except json.JSONDecodeError:
-            features = {}
-
+    features = _get_plant_features(plant_data)
     merged = {}
 
     # Extract only desired features from the features JSONB
-    if isinstance(features, dict):
-        for key in desired_features:
-            if key in features:
-                merged[key] = features[key]
+    for key in desired_features:
+        if key in features:
+            merged[key] = features[key]
 
     # Add primary fields (ensure they override feature keys)
     merged["id"] = plant_data.get("id")
@@ -816,6 +815,43 @@ def _format_plant_response_with_rating(plant_data: dict) -> dict:
     result["avg_score"] = plant_data.get("avg_score", 0.0)
     result["rating_count"] = plant_data.get("rating_count", 0)
     result["rating_position"] = plant_data.get("rating_position", 0)
+    return result
+
+
+def _format_plant_detail_response(plant_data: dict) -> dict:
+    """Format detailed plant response with all DB features for single plant page."""
+    features = _get_plant_features(plant_data)
+
+    result = _format_plant_response_with_rating(plant_data)
+    result["features"] = features
+
+    # Ensure these fields are available at top-level for convenient frontend access.
+    top_level_fields = [
+        "origin",
+        "soil_type",
+        "humidity_preference",
+        "fertilizer_needs",
+        "growth_rate",
+        "toxicity",
+        "maintenance_level",
+        "repotting_frequency",
+        "common_pests",
+        "common_diseases",
+        "common_issues",
+        "legend_of_plant",
+        "health_benefits",
+        "flowering",
+        "fragrance",
+        "misting",
+        "flowering_misting",
+        "min_temp",
+        "max_temp",
+    ]
+
+    for field_name in top_level_fields:
+        if field_name in features and field_name not in result:
+            result[field_name] = features[field_name]
+
     return result
 
 
@@ -1190,6 +1226,38 @@ def update_plant_notes(user_payload):
         if "not found" in str(e):
             return jsonify({"success": False, "message": "Растение не найдено в коллекции пользователя"}), 404
         return jsonify({"success": False, "message": "Ошибка обновления заметок"}), 500
+
+
+@app.route("/api/plants/<int:plant_id>", methods=["GET"])
+def plant_details(plant_id: int):
+    """
+    Get a single plant with full feature set for detail page.
+    ---
+    tags:
+      - Plants
+    parameters:
+      - name: plant_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Plant details retrieved
+      404:
+        description: Plant not found
+      500:
+        description: Server error
+    """
+    try:
+        repo = PlantRepository()
+        plant = repo.get_plant_by_id(int(plant_id))
+        if not plant:
+            return jsonify({"success": False, "message": "Plant not found"}), 404
+
+        return jsonify({"success": True, "plant": _format_plant_detail_response(plant)})
+    except Exception as e:
+        print(f"Error in /api/plants/{plant_id}: {e}")
+        return jsonify({"success": False, "message": "Plant details error", "details": str(e)}), 500
 
 
 @app.route("/api/plants-rating", methods=["GET"])

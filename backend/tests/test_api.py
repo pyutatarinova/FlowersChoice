@@ -41,6 +41,25 @@ def _register_user(client, email: str | None = None):
     }
 
 
+def test_get_plant_details_returns_full_payload(client):
+    plant_id = _get_any_plant_id(client)
+    resp = client.get(f"/api/plants/{plant_id}")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data.get("success") is True
+    plant = data.get("plant", {})
+    assert plant.get("id") == plant_id
+    assert isinstance(plant.get("features"), dict)
+    assert plant.get("plant_name")
+
+
+def test_get_plant_details_returns_404_for_unknown_id(client):
+    resp = client.get("/api/plants/999999999")
+    assert resp.status_code == 404
+    data = resp.get_json()
+    assert data.get("success") is False
+
+
 def test_register_persists_user_and_token(client):
     user = _register_user(client)
     resp = client.get("/api/userinfo", headers={"Authorization": f"Bearer {user['token']}"})

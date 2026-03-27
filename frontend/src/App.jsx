@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
+import { Gift, User } from 'lucide-react';
 import LandingPage from './LendingPage';
 
 // header
@@ -31,6 +31,7 @@ import MyPlantsScreen from './components/my-plants/MyPlantsScreen';
 
 // ratings
 import RatingsScreen from './components/ratings/RatingsScreen';
+import PlantDetailsScreen from './components/plants/PlantDetailsScreen';
 
 // profile
 import ProfileScreen from './components/profile/ProfileScreen';
@@ -38,6 +39,44 @@ import ProfileScreen from './components/profile/ProfileScreen';
 // constants
 import { QUESTIONS } from './constants/questions';
 import { mockResults } from './constants/mockResults';
+import { getPlantPath, parsePlantIdFromPath } from './utils/plantLinks';
+
+const STATE_PATH_MAP = {
+  landing: '/',
+  home: '/home',
+  ratings: '/ratings',
+  favorites: '/favorites',
+  manual_selection: '/manual-selection',
+  my_plants: '/my-plants',
+  profile: '/profile',
+  results: '/results',
+  compare: '/compare',
+};
+
+const PATH_STATE_MAP = Object.entries(STATE_PATH_MAP).reduce((acc, [state, path]) => {
+  acc[path] = state;
+  return acc;
+}, {});
+
+const normalizePathname = (pathname = '/') => {
+  const normalized = String(pathname || '/').trim();
+  if (!normalized || normalized === '/') return '/';
+  return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
+};
+
+const resolveRoute = (pathname = '/') => {
+  const normalizedPath = normalizePathname(pathname);
+  const plantId = parsePlantIdFromPath(normalizedPath);
+
+  if (plantId) {
+    return { state: 'plant_details', plantId };
+  }
+
+  return {
+    state: PATH_STATE_MAP[normalizedPath] || 'landing',
+    plantId: null,
+  };
+};
 
 // --- Утилиты для работы с датами и статистикой ---
 const formatDate = (timestamp) => {
@@ -85,6 +124,8 @@ const App = () => {
   // eslint-disable-next-line no-unused-vars
   const [userId, setUserId] = useState(null);
   const [myPlants, setMyPlants] = useState([]);
+  const [selectedPlantId, setSelectedPlantId] = useState(null);
+  const [selectedPlantPreview, setSelectedPlantPreview] = useState(null);
   // (Удалена очистка localStorage при загрузке страницы)
   const [userProfile, setUserProfile] = useState(() => {
     try {
@@ -94,6 +135,42 @@ const App = () => {
       return {};
     }
   });
+
+  const navigate = useCallback((newState, payload = null, options = {}) => {
+    const shouldReplaceHistory = options?.replace === true;
+
+    if (newState === 'compare' && payload) {
+      setComparisonPlants(payload);
+    }
+
+    if (newState === 'plant_details') {
+      const nextPlantId = Number(payload?.id ?? payload);
+      if (!Number.isFinite(nextPlantId) || nextPlantId <= 0) return;
+
+      const nextPath = getPlantPath(payload);
+      setSelectedPlantId(nextPlantId);
+      setSelectedPlantPreview(payload && typeof payload === 'object' ? payload : null);
+      setAppState('plant_details');
+
+      if (normalizePathname(window.location.pathname) !== normalizePathname(nextPath)) {
+        if (shouldReplaceHistory) window.history.replaceState({}, '', nextPath);
+        else window.history.pushState({}, '', nextPath);
+      }
+      return;
+    }
+
+    setSelectedPlantId(null);
+    setSelectedPlantPreview(null);
+    setAppState(newState);
+
+    const nextPath = STATE_PATH_MAP[newState];
+    if (!nextPath) return;
+
+    if (normalizePathname(window.location.pathname) !== normalizePathname(nextPath)) {
+      if (shouldReplaceHistory) window.history.replaceState({}, '', nextPath);
+      else window.history.pushState({}, '', nextPath);
+    }
+  }, []);
 
   // --- Загрузка профиля пользователя из userProfile.json при старте ---
   // Удаляем загрузку userProfile.json, теперь профиль только через /api/userinfo после логина/регистрации
@@ -130,7 +207,7 @@ const App = () => {
     setMyPlants(prev => [...prev, newPlantData]);
     setFavorites(prev => prev.filter(f => f.id !== plant.id));
     navigate('my_plants');
-  }, [myPlants]);
+  }, [myPlants, navigate]);
 
   const updatePlant = useCallback(async (docId, data) => {
     setMyPlants(prev => prev.map(p => p.id === docId ? { ...p, ...data } : p));
@@ -278,11 +355,6 @@ const App = () => {
   const currentQuestions = useMemo(() => mode ? QUESTIONS[mode] : [], [mode]);
   const totalSteps = currentQuestions.length;
 
-  const navigate = (newState, payload = null) => {
-    if (newState === 'compare' && payload) setComparisonPlants(payload);
-    setAppState(newState);
-  };
-
   const nextStep = () => {
     if (step < totalSteps) setStep(step + 1);
     else if (step === totalSteps) handleGenerate();
@@ -290,7 +362,7 @@ const App = () => {
 
   const selectMode = (selectedMode) => {
     setMode(selectedMode);
-    setAppState('questionnaire');
+    navigate('questionnaire');
     setStep(1); 
   };
 
@@ -325,14 +397,14 @@ const App = () => {
       setMode(null);
 
       setIsLoading(false);
-      setAppState("results");
+      navigate('results');
     } catch (e) {
       console.error("Ошибка API:", e);
       setAnswers({});
       setStep(0);
       setMode(null);
       setIsLoading(false);
-      setAppState("results");
+      navigate('results');
     }
   };
   
@@ -349,6 +421,37 @@ const App = () => {
     }
     loadUserPlantsData(token);
   }, [loadUserPlantsData]);
+
+  useEffect(() => {
+    const route = resolveRoute(window.location.pathname);
+    if (route.state === 'plant_details') {
+      setSelectedPlantId(route.plantId);
+      setSelectedPlantPreview(null);
+      setAppState('plant_details');
+      return;
+    }
+    setSelectedPlantId(null);
+    setSelectedPlantPreview(null);
+    setAppState(route.state);
+  }, []);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const route = resolveRoute(window.location.pathname);
+      if (route.state === 'plant_details') {
+        setSelectedPlantId(route.plantId);
+        setSelectedPlantPreview(null);
+        setAppState('plant_details');
+        return;
+      }
+      setSelectedPlantId(null);
+      setSelectedPlantPreview(null);
+      setAppState(route.state);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
 
   // --- RENDER CONTENT ---
@@ -419,10 +522,20 @@ const App = () => {
           setFavorites([]);
           setMyPlants([]);
           setUserProfile({});
-          setAppState('home');
+          navigate('home');
         }}
       />;
       case 'ratings': return <RatingsScreen myPlants={myPlants} favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} />;
+      case 'plant_details': return (
+        <PlantDetailsScreen
+          plantId={selectedPlantId}
+          initialPlant={selectedPlantPreview}
+          onNavigate={navigate}
+          favorites={favorites}
+          setFavorites={setFavorites}
+          onRequireAuth={() => setShowAuthRequired(true)}
+        />
+      );
       default: return null;
     }
   };
@@ -430,7 +543,13 @@ const App = () => {
   return (
     <div className="min-h-screen bg-emerald-50 flex flex-col font-sans antialiased">
       <Header favoritesCount={favorites.length} myPlantsCount={myPlants.length} onNavigate={navigate} userId={userId} userName={userProfile?.name || ''} />
-      <main className={appState === 'landing' ? 'flex-grow' : 'flex-grow p-4 sm:p-8 max-w-4xl w-full mx-auto'}>
+      <main
+        className={
+          appState === 'landing'
+            ? 'flex-grow'
+            : `flex-grow p-4 sm:p-8 ${appState === 'plant_details' ? 'max-w-6xl' : 'max-w-4xl'} w-full mx-auto`
+        }
+      >
         {appState === 'landing' ? (
           renderContent()
         ) : (
