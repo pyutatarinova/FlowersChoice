@@ -4,6 +4,7 @@ import os
 
 # import psycopg2
 import random
+import sys
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
@@ -14,6 +15,11 @@ from dotenv import load_dotenv
 from flasgger import Swagger
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+# Keep backend module resolution first, but make ml_services importable.
+ML_SERVICES_DIR = Path(__file__).parent.parent / "ml_services"
+if str(ML_SERVICES_DIR) not in sys.path:
+    sys.path.append(str(ML_SERVICES_DIR))
 
 from plant_repository import PlantRepository
 
