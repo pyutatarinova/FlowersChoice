@@ -58,3 +58,24 @@ services:
     expose:
       - "3001"
     restart: unless-stopped
+
+  # -----------------------
+  # Prometheus
+  # -----------------------
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: flowerschoice_prometheus
+    depends_on:
+      - backend
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
