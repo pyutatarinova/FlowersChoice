@@ -16,10 +16,23 @@ from email_service import build_watering_congrats_email, build_watering_reminder
 from flasgger import Swagger
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from prometheus_flask_exporter import PrometheusMetrics
+
+# Keep backend module resolution first, but make ml_services importable.
+ML_SERVICES_DIR = Path(__file__).parent.parent / "ml_services"
+if str(ML_SERVICES_DIR) not in sys.path:
+    sys.path.append(str(ML_SERVICES_DIR))
+
 from plant_repository import PlantRepository
 
 app = Flask(__name__)
 CORS(app)
+metrics = PrometheusMetrics(
+    app,
+    path="/internal/metrics",
+    defaults_prefix="flowerschoice_backend",
+    excluded_paths=[r"^/internal/metrics$", r"^/apidocs/.*", r"^/flasgger_static/.*"],
+)
 # Конфигурация Swagger с API Key
 app.config["SWAGGER"] = {
     "title": "FlowersChoice API",

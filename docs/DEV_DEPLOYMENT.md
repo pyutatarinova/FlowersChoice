@@ -16,6 +16,12 @@ docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.y
 docker compose --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d --build
 ```
 
+Мониторинг Prometheus в dev не включен по умолчанию. Если он нужен, запускайте compose с profile `monitoring`:
+
+```bash
+docker compose --profile monitoring --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
 ## Проверка
 
 - `http://localhost:5173` — frontend (Vite)
