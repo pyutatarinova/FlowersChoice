@@ -1,7 +1,7 @@
 import React from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import MyPlantCard from '../../components/my-plants/MyPlantCard';
-import { getWateringStatus } from '../../App';
+import { getWateringStatus } from '../../lib/wateringUtils';
 
 const MyPlantsScreen = ({ myPlants, onUpdatePlant, onRemovePlant, onNavigate }) => {
     if (myPlants.length === 0) {
@@ -18,8 +18,8 @@ const MyPlantsScreen = ({ myPlants, onUpdatePlant, onRemovePlant, onNavigate }) 
     }
     
     const sortedPlants = [...myPlants].sort((a, b) => {
-        const aStatus = getWateringStatus(a.wateringHistory, a.wateringSchedule);
-        const bStatus = getWateringStatus(b.wateringHistory, b.wateringSchedule);
+        const aStatus = getWateringStatus(a.wateringHistory, a.wateringSchedule, a.lastWateringDate);
+        const bStatus = getWateringStatus(b.wateringHistory, b.wateringSchedule, b.lastWateringDate);
         if (aStatus.isDue && !bStatus.isDue) return -1;
         if (!aStatus.isDue && bStatus.isDue) return 1;
         return (aStatus.daysLeft || Infinity) - (bStatus.daysLeft || Infinity);

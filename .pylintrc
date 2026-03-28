@@ -1,5 +1,5 @@
 [MASTER]
-ignore=venv,env,__pycache__,migrations
+ignore=venv,.venv,env,ml_venv,__pycache__,migrations
 
 [MESSAGES CONTROL]
 disable=all
@@ -24,3 +24,12 @@ enable=
 
 [FORMAT]
 max-line-length=120
+
+[TYPECHECK]
+ignored-modules=
+    sentence_transformers,
+    torch,
+    sympy,
+    transformers,
+    numpy,
+    tqdm

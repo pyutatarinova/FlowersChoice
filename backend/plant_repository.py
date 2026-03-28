@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+from datetime import date, timedelta
 from typing import Any, Dict, List, Tuple
 
 import psycopg2
@@ -261,7 +262,7 @@ class PlantRepository:
             with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
                 cur.execute(
                     f"""
-                    SELECT p.id, p.name, p.features, up.score, up.features->>'notes' as notes
+                    SELECT p.id, p.name, p.features, up.score, up.features as user_features, up.features->>'notes' as notes
                     FROM user_plants up
                     JOIN plants p ON p.id = up.plant_id
                     WHERE up.user_id = %s AND up.{flag_column} = TRUE
@@ -271,12 +272,38 @@ class PlantRepository:
                 rows = cur.fetchall()
                 results = []
                 for r in rows:
+                    user_features = r.get("user_features") or {}
+                    if isinstance(user_features, str):
+                        try:
+                            user_features = json.loads(user_features)
+                        except json.JSONDecodeError:
+                            user_features = {}
+                    if not isinstance(user_features, dict):
+                        user_features = {}
+
+                    raw_schedule = user_features.get("watering_schedule_days")
+                    try:
+                        watering_schedule_days = int(raw_schedule) if raw_schedule is not None else None
+                    except (TypeError, ValueError):
+                        watering_schedule_days = None
+
+                    raw_history = user_features.get("watering_history")
+                    watering_history = raw_history if isinstance(raw_history, list) else []
+                    watering_history = sorted({str(item).strip() for item in watering_history if item is not None and str(item).strip()})
+
+                    last_watering_date = user_features.get("last_watering_date")
+                    if last_watering_date is not None:
+                        last_watering_date = str(last_watering_date).strip() or None
+
                     plant = {
                         "id": int(r["id"]),
                         "name": r.get("name"),
                         "features": r.get("features"),
                         "score": float(r.get("score")) if r.get("score") is not None else 0.0,
                         "notes": r.get("notes") or "",
+                        "watering_schedule_days": watering_schedule_days,
+                        "last_watering_date": last_watering_date,
+                        "watering_history": watering_history,
                     }
                     results.append(plant)
 
@@ -431,6 +458,152 @@ class PlantRepository:
                     (notes, user_id, plant_id),
                 )
 
+                conn.commit()
+
+    def update_plant_watering(
+        self,
+        user_id: int,
+        plant_id: int,
+        watering_schedule_days: int | None,
+        last_watering_date: str | None,
+        watering_history: List[str] | None,
+    ) -> None:
+        """Update watering schedule fields in user_plants.features JSONB."""
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT 1 FROM user_plants
+                    WHERE user_id = %s AND plant_id = %s
+                """,
+                    (user_id, plant_id),
+                )
+
+                if not cur.fetchone():
+                    raise Exception(f"Plant record not found for user_id={user_id}, plant_id={plant_id}")
+
+                payload = {
+                    "watering_schedule_days": watering_schedule_days,
+                    "last_watering_date": last_watering_date,
+                    "watering_history": watering_history or [],
+                }
+
+                cur.execute(
+                    """
+                    UPDATE user_plants
+                    SET features = COALESCE(features, '{}'::jsonb) || %s::jsonb
+                    WHERE user_id = %s AND plant_id = %s
+                """,
+                    (json.dumps(payload, ensure_ascii=False), user_id, plant_id),
+                )
+
+                conn.commit()
+
+    def get_watering_reminder_candidates(self, target_date: date) -> List[Dict[str, Any]]:
+        """Return reminder candidates for the target date."""
+        with self._get_connection() as conn:
+            with conn.cursor(cursor_factory=extras.RealDictCursor) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        up.user_id,
+                        up.plant_id,
+                        u.email AS user_email,
+                        u.name AS user_name,
+                        p.name AS plant_name,
+                        up.features->>'watering_schedule_days' AS watering_schedule_days,
+                        up.features->>'last_watering_date' AS last_watering_date,
+                        up.features->>'watering_last_reminder_date' AS watering_last_reminder_date
+                    FROM user_plants up
+                    JOIN users u ON u.id = up.user_id
+                    JOIN plants p ON p.id = up.plant_id
+                    WHERE up.my_plant = TRUE
+                      AND COALESCE(TRIM(u.email), '') <> ''
+                """
+                )
+                rows = cur.fetchall()
+
+        candidates: List[Dict[str, Any]] = []
+        for row in rows:
+            schedule_raw = row.get("watering_schedule_days")
+            last_watering_raw = row.get("last_watering_date")
+            last_reminder_raw = row.get("watering_last_reminder_date")
+
+            try:
+                schedule_days = int(schedule_raw)
+            except (TypeError, ValueError):
+                continue
+            if schedule_days <= 0:
+                continue
+
+            try:
+                last_watering_date = date.fromisoformat(str(last_watering_raw))
+            except (TypeError, ValueError):
+                continue
+
+            due_date = last_watering_date + timedelta(days=schedule_days)
+            if due_date != target_date:
+                continue
+
+            if last_reminder_raw:
+                try:
+                    if date.fromisoformat(str(last_reminder_raw)) == target_date:
+                        continue
+                except (TypeError, ValueError):
+                    pass
+
+            candidates.append(
+                {
+                    "user_id": int(row["user_id"]),
+                    "plant_id": int(row["plant_id"]),
+                    "user_email": row.get("user_email"),
+                    "user_name": row.get("user_name") or "",
+                    "plant_name": row.get("plant_name") or "",
+                }
+            )
+
+        return candidates
+
+    def mark_watering_reminder_sent(self, user_id: int, plant_id: int, reminder_date: date) -> bool:
+        """Set reminder sent marker in features if it is not set for this date yet."""
+        reminder_date_str = reminder_date.isoformat()
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE user_plants
+                    SET features = jsonb_set(
+                        COALESCE(features, '{}'::jsonb),
+                        '{watering_last_reminder_date}',
+                        to_jsonb(%s::text),
+                        TRUE
+                    )
+                    WHERE user_id = %s
+                      AND plant_id = %s
+                      AND COALESCE(features->>'watering_last_reminder_date', '') <> %s
+                    RETURNING 1
+                """,
+                    (reminder_date_str, user_id, plant_id, reminder_date_str),
+                )
+                updated = cur.fetchone() is not None
+                conn.commit()
+                return updated
+
+    def clear_watering_reminder_sent(self, user_id: int, plant_id: int, reminder_date: date) -> None:
+        """Remove reminder sent marker for this date (used when email sending fails)."""
+        reminder_date_str = reminder_date.isoformat()
+        with self._get_connection() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE user_plants
+                    SET features = COALESCE(features, '{}'::jsonb) - 'watering_last_reminder_date'
+                    WHERE user_id = %s
+                      AND plant_id = %s
+                      AND COALESCE(features->>'watering_last_reminder_date', '') = %s
+                """,
+                    (user_id, plant_id, reminder_date_str),
+                )
                 conn.commit()
 
     def get_plants_rating(self) -> List[Dict[str, Any]]:

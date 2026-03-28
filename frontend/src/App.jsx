@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Gift, User } from 'lucide-react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search, MessageCircle } from 'lucide-react';
 import LandingPage from './LendingPage';
 
 // header
@@ -39,6 +39,10 @@ import ProfileScreen from './components/profile/ProfileScreen';
 // constants
 import { QUESTIONS } from './constants/questions';
 import { mockResults } from './constants/mockResults';
+import {
+  getLatestWateringDate,
+  normalizeWateringHistory
+} from './lib/wateringUtils';
 import { getPlantPath, parsePlantIdFromPath } from './utils/plantLinks';
 
 const STATE_PATH_MAP = {
@@ -78,35 +82,6 @@ const resolveRoute = (pathname = '/') => {
   };
 };
 
-// --- Утилиты для работы с датами и статистикой ---
-const formatDate = (timestamp) => {
-  if (!timestamp) return '—';
-  const date = timestamp.seconds ? new Date(timestamp.seconds * 1000) : new Date(timestamp);
-  return date.toLocaleDateString('ru-RU', { year: 'numeric', month: 'short', day: 'numeric' });
-};
-
-const getWateringStatus = (wateringHistory, wateringScheduleDays) => {
-  if (!wateringHistory || wateringHistory.length === 0 || !wateringScheduleDays) return { status: 'Нет данных', isDue: false, daysLeft: null };
-  
-  const lastWateredDate = wateringHistory.reduce((latest, current) => {
-      const currentDate = current.seconds ? new Date(current.seconds * 1000) : new Date(current);
-      return currentDate > latest ? currentDate : latest;
-  }, new Date(0));
-
-  const nextWatering = new Date(lastWateredDate);
-  nextWatering.setDate(nextWatering.getDate() + wateringScheduleDays);
-  
-  const now = new Date();
-  const diffTime = nextWatering.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-  if (diffDays <= 0) {
-    return { status: 'Пора полить!', isDue: true, daysLeft: 0, lastWatered: lastWateredDate };
-  } else {
-    return { status: `Полить через ${diffDays} дн.`, isDue: false, daysLeft: diffDays, lastWatered: lastWateredDate };
-  }
-};
-
 // --- Главный компонент App ---
 const App = () => {
   const [appState, setAppState] = useState('landing');
@@ -124,6 +99,7 @@ const App = () => {
   // eslint-disable-next-line no-unused-vars
   const [userId, setUserId] = useState(null);
   const [myPlants, setMyPlants] = useState([]);
+  const myPlantsRef = useRef(myPlants);
   const [selectedPlantId, setSelectedPlantId] = useState(null);
   const [selectedPlantPreview, setSelectedPlantPreview] = useState(null);
   // (Удалена очистка localStorage при загрузке страницы)
@@ -135,6 +111,10 @@ const App = () => {
       return {};
     }
   });
+
+  useEffect(() => {
+    myPlantsRef.current = myPlants;
+  }, [myPlants]);
 
   const navigate = useCallback((newState, payload = null, options = {}) => {
     const shouldReplaceHistory = options?.replace === true;
@@ -200,8 +180,9 @@ const App = () => {
       },
       notes: '',
       rating: 0,
-      wateringSchedule: 7,
-      wateringHistory: [new Date()],
+      wateringSchedule: null,
+      lastWateringDate: null,
+      wateringHistory: [],
       addedAt: new Date()
     };
     setMyPlants(prev => [...prev, newPlantData]);
@@ -210,9 +191,20 @@ const App = () => {
   }, [myPlants, navigate]);
 
   const updatePlant = useCallback(async (docId, data) => {
-    setMyPlants(prev => prev.map(p => p.id === docId ? { ...p, ...data } : p));
+    const { wateredNow, ...patchData } = data;
+    const currentPlant = myPlantsRef.current.find((p) => p.id === docId) || null;
+    const mergedPlant = currentPlant ? { ...currentPlant, ...patchData } : { ...patchData };
+    const normalizedHistory = normalizeWateringHistory(mergedPlant.wateringHistory);
+    const normalizedLastWateringDate = getLatestWateringDate(normalizedHistory, mergedPlant.lastWateringDate);
+    const mergedPlantForApi = {
+      ...mergedPlant,
+      wateringHistory: normalizedHistory,
+      lastWateringDate: normalizedLastWateringDate
+    };
 
-    if (Object.prototype.hasOwnProperty.call(data, 'rating')) {
+    setMyPlants(prev => prev.map((p) => (p.id === docId ? { ...p, ...mergedPlantForApi } : p)));
+
+    if (Object.prototype.hasOwnProperty.call(patchData, 'rating')) {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
@@ -225,7 +217,7 @@ const App = () => {
           },
           body: JSON.stringify({
             plant_id: docId,
-            score: data.rating
+            score: patchData.rating
           })
         });
         if (!response.ok) {
@@ -237,7 +229,7 @@ const App = () => {
       }
     }
 
-    if (Object.prototype.hasOwnProperty.call(data, 'notes')) {
+    if (Object.prototype.hasOwnProperty.call(patchData, 'notes')) {
       const token = localStorage.getItem('authToken');
       if (!token) return;
 
@@ -250,7 +242,7 @@ const App = () => {
           },
           body: JSON.stringify({
             plant_id: docId,
-            notes: data.notes
+            notes: patchData.notes
           })
         });
         if (!response.ok) {
@@ -259,6 +251,43 @@ const App = () => {
         }
       } catch (e) {
         console.error('Ошибка обновления заметок растения:', e);
+      }
+    }
+
+    const hasWateringUpdate = ['wateringSchedule', 'wateringHistory', 'lastWateringDate']
+      .some((field) => Object.prototype.hasOwnProperty.call(patchData, field));
+
+    if (hasWateringUpdate) {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+
+      const wateringHistory = normalizeWateringHistory(mergedPlantForApi.wateringHistory);
+      const lastWateringDate = getLatestWateringDate(wateringHistory, mergedPlantForApi.lastWateringDate);
+      const scheduleCandidate = mergedPlantForApi.wateringSchedule;
+      const parsedSchedule = Number(scheduleCandidate);
+      const wateringSchedule = Number.isFinite(parsedSchedule) && parsedSchedule > 0 ? parsedSchedule : null;
+
+      try {
+        const response = await fetch('/api/update-plant-watering', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            plant_id: docId,
+            watering_schedule_days: wateringSchedule,
+            last_watering_date: lastWateringDate,
+            watering_history: wateringHistory,
+            watered_now: wateredNow === true
+          })
+        });
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `HTTP ${response.status}`);
+        }
+      } catch (e) {
+        console.error('Ошибка обновления графика полива:', e);
       }
     }
   }, []);
@@ -294,25 +323,36 @@ const App = () => {
   }, []);
 
   const transformMyPlants = useCallback((plants = []) => {
-    return plants.map(plant => ({
-      id: plant.id,
-      originalId: plant.id,
-      name: plant.plant_name,
-      latin: plant.plant_name,
-      image: plant.photo,
-      details: plant.brief_description,
-      traits: {
-        light: plant.light_requirements,
-        water: plant.watering_frequency,
-        temp: plant.comfort_temp,
-        size: plant.mature_size
-      },
-      notes: plant.notes || '',
-      rating: plant.score || 0,
-      wateringSchedule: 7,
-      wateringHistory: [new Date()],
-      addedAt: new Date()
-    }));
+    return plants.map((plant) => {
+      const historyFromApi = normalizeWateringHistory(plant.watering_history || []);
+      const latestWateringDate = getLatestWateringDate(historyFromApi, plant.last_watering_date);
+      const normalizedHistory = latestWateringDate
+        ? normalizeWateringHistory([...historyFromApi, latestWateringDate])
+        : historyFromApi;
+      const parsedSchedule = Number(plant.watering_schedule_days);
+      const wateringSchedule = Number.isFinite(parsedSchedule) && parsedSchedule > 0 ? parsedSchedule : null;
+
+      return {
+        id: plant.id,
+        originalId: plant.id,
+        name: plant.plant_name,
+        latin: plant.plant_name,
+        image: plant.photo,
+        details: plant.brief_description,
+        traits: {
+          light: plant.light_requirements,
+          water: plant.watering_frequency,
+          temp: plant.comfort_temp,
+          size: plant.mature_size
+        },
+        notes: plant.notes || '',
+        rating: Number.isFinite(Number(plant.score)) ? Number(plant.score) : 0,
+        wateringSchedule,
+        lastWateringDate: latestWateringDate,
+        wateringHistory: normalizedHistory,
+        addedAt: new Date()
+      };
+    });
   }, []);
 
   const loadUserPlantsData = useCallback(async (token) => {
@@ -422,6 +462,8 @@ const App = () => {
     loadUserPlantsData(token);
   }, [loadUserPlantsData]);
 
+
+  const isGuest = !localStorage.getItem('authToken');
   useEffect(() => {
     const route = resolveRoute(window.location.pathname);
     if (route.state === 'plant_details') {
@@ -505,9 +547,18 @@ const App = () => {
           );
       }
       case 'loading': return <LoadingScreen />;
-      case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
-      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
-      case 'manual_selection': return <ManualSelectionScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
+      case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} isGuest={isGuest} onShowAuth={(type) => {
+        if (type === 'login') setShowLoginWidget(true);
+        else setShowAuthWidget(true);
+      }} />;
+      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} isGuest={isGuest} onShowAuth={(type) => {
+        if (type === 'login') setShowLoginWidget(true);
+        else setShowAuthWidget(true);
+      }} />;
+      case 'manual_selection': return <ManualSelectionScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} isGuest={isGuest} onShowAuth={(type) => {
+        if (type === 'login') setShowLoginWidget(true);
+        else setShowAuthWidget(true);
+      }} />;
       case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
       case 'my_plants': return <MyPlantsScreen myPlants={myPlants} onUpdatePlant={updatePlant} onRemovePlant={removePlant} onNavigate={navigate} />;
       case 'profile': return <ProfileScreen
@@ -558,6 +609,20 @@ const App = () => {
           </div>
         )}
       </main>
+      <a
+        href="https://forms.gle/xdzJUqN6yhSL3Tib9"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Обратная связь"
+        className="group fixed bottom-6 right-6 z-[1200]"
+      >
+        <span className="flex items-center rounded-full border border-emerald-100 bg-white/95 px-3 py-3 text-emerald-700 shadow-lg shadow-emerald-200/40 backdrop-blur transition-all duration-200 hover:shadow-xl focus-within:shadow-xl">
+    <MessageCircle className="h-5 w-5 text-emerald-600" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-emerald-700 opacity-0 transition-all duration-200 group-hover:max-w-[160px] group-hover:opacity-100 ml-0 group-hover:ml-2">
+      Обратная связь
+        </span>
+      </span>
+      </a>
       {/* Модальное окно регистрации */}
       {showAuthWidget && (
         <AuthModal
@@ -602,28 +667,8 @@ const App = () => {
               });
               const favData = await favRes.json();
               if (favData.success) {
-                setFavorites(favData.favorite);
-                // Преобразуем my_plant в формат для myPlants
-                const transformedMyPlants = favData.my_plant.map(plant => ({
-                  id: plant.id,
-                  originalId: plant.id,
-                  name: plant.plant_name,
-                  latin: plant.plant_name,
-                  image: plant.photo,
-                  details: plant.brief_description,
-                  traits: {
-                    light: plant.light_requirements,
-                    water: plant.watering_frequency,
-                    temp: plant.comfort_temp,
-                    size: plant.mature_size
-                  },
-                  notes: '',
-                  rating: Number.isFinite(Number(plant.score)) ? Number(plant.score) : 0,
-                  wateringSchedule: 7,
-                  wateringHistory: [new Date()],
-                  addedAt: new Date()
-                }));
-                setMyPlants(transformedMyPlants);
+                setFavorites(Array.isArray(favData.favorite) ? favData.favorite : []);
+                setMyPlants(transformMyPlants(Array.isArray(favData.my_plant) ? favData.my_plant : []));
               }
               await loadUserPlantsData(token);
             } catch (e) {
@@ -664,28 +709,8 @@ const App = () => {
               });
               const favData = await favRes.json();
               if (favData.success) {
-                setFavorites(favData.favorite);
-                // Преобразуем my_plant в формат для myPlants
-                const transformedMyPlants = favData.my_plant.map(plant => ({
-                  id: plant.id,
-                  originalId: plant.id,
-                  name: plant.plant_name,
-                  latin: plant.plant_name,
-                  image: plant.photo,
-                  details: plant.brief_description,
-                  traits: {
-                    light: plant.light_requirements,
-                    water: plant.watering_frequency,
-                    temp: plant.comfort_temp,
-                    size: plant.mature_size
-                  },
-                  notes: '',
-                  rating: Number.isFinite(Number(plant.score)) ? Number(plant.score) : 0,
-                  wateringSchedule: 7,
-                  wateringHistory: [new Date()],
-                  addedAt: new Date()
-                }));
-                setMyPlants(transformedMyPlants);
+                setFavorites(Array.isArray(favData.favorite) ? favData.favorite : []);
+                setMyPlants(transformMyPlants(Array.isArray(favData.my_plant) ? favData.my_plant : []));
               }
               await loadUserPlantsData(token);
             } catch (e) {
@@ -720,5 +745,3 @@ const App = () => {
 
 
 export default App;
-// eslint-disable-next-line react-refresh/only-export-components
-export { getWateringStatus, formatDate };

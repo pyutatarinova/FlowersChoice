@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import { mockResults } from '../../constants/mockResults';
 import ManualSelectionCard from './ManualSelectionCard';
@@ -15,7 +15,7 @@ const shufflePlants = (plants) => {
   return list;
 };
 
-const ManualSelectionScreen = ({ favorites, setFavorites }) => {
+const ManualSelectionScreen = ({ favorites, setFavorites, isGuest, onShowAuth }) => {
   const [allPlants, setAllPlants] = useState(manualCache?.allPlants || []);
   const [currentPair, setCurrentPair] = useState(manualCache?.currentPair || []);
   const [isLoading, setIsLoading] = useState(!manualCache);
@@ -213,6 +213,19 @@ const ManualSelectionScreen = ({ favorites, setFavorites }) => {
       <p className="text-center text-emerald-600 mb-8">
         Смотрите случайные карточки и добавляйте понравившиеся в избранное.
       </p>
+      {isGuest && (
+        <div className="mb-6 text-center text-sm text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-3">
+          <div className="mb-2">Зарегистрируйтесь, чтобы сохранить выбранные растения</div>
+          <div className="flex items-center justify-center gap-2">
+            <button onClick={() => onShowAuth && onShowAuth('register')} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-lime-500 text-white hover:bg-lime-600 transition-colors">
+              Зарегистрироваться
+            </button>
+            <button  onClick={() => onShowAuth && onShowAuth('login')} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors" >
+                   Войти
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {currentPair.map((plant, index) => (
@@ -225,9 +238,10 @@ const ManualSelectionScreen = ({ favorites, setFavorites }) => {
           />
         ))}
       </div>
+
+      <p className="text-center text-sm text-emerald-500 mt-5">Листайте растения с помощью ← и → <br /> Добавить в избранное — Shift + ← или →</p>
     </div>
   );
 };
 
 export default ManualSelectionScreen;
-

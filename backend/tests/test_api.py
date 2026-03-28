@@ -169,6 +169,40 @@ def test_update_score_and_notes_persists(client):
     assert plant.get("notes") == "Needs bright light"
 
 
+def test_update_watering_schedule_persists(client):
+    user = _register_user(client, email=_unique_email("watering"))
+    plant_id = _get_any_plant_id(client)
+    client.post(
+        "/api/add-my-plant",
+        json={"plant_id": plant_id},
+        headers={"Authorization": f"Bearer {user['token']}"},
+    )
+
+    resp = client.post(
+        "/api/update-plant-watering",
+        json={
+            "plant_id": plant_id,
+            "watering_schedule_days": 5,
+            "last_watering_date": "2026-03-10",
+            "watering_history": ["2026-03-01", "2026-03-06", "2026-03-10"],
+            "watered_now": True,
+        },
+        headers={"Authorization": f"Bearer {user['token']}"},
+    )
+    assert resp.status_code == 200
+    assert resp.get_json().get("success") is True
+
+    resp = client.get("/api/userplants", headers={"Authorization": f"Bearer {user['token']}"})
+    assert resp.status_code == 200
+    data = resp.get_json()
+    my_plants = data.get("my_plant", [])
+    plant = next(p for p in my_plants if p.get("id") == plant_id)
+
+    assert plant.get("watering_schedule_days") == 5
+    assert plant.get("last_watering_date") == "2026-03-10"
+    assert plant.get("watering_history") == ["2026-03-01", "2026-03-06", "2026-03-10"]
+
+
 def test_remove_plant_deletes_empty_row(client):
     user = _register_user(client, email=_unique_email("remove"))
     plant_id = _get_any_plant_id(client)

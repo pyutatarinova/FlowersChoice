@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search } from 'lucide-react';
 import FavoriteItem from '../../components/favorites/FavoriteItem';
 
-const FavoritesScreen = ({ favorites, setFavorites, onNavigate, onAddToMyPlants, onRequireAuth }) => {
+const FavoritesScreen = ({ favorites, setFavorites, onNavigate, onAddToMyPlants, onRequireAuth, isGuest, onShowAuth }) => {
   const [selectedForComparison, setSelectedForComparison] = useState([]);
   const [detailedPlantId, setDetailedPlantId] = useState(null);
 
@@ -80,6 +80,19 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate, onAddToMyPlants,
         <Heart className="w-12 h-12 text-red-500 mx-auto mb-4" />
         <h3 className="text-2xl font-bold text-emerald-800 mb-3">Ваш список избранного пуст</h3>
         <p className="text-emerald-600 mb-6">Чтобы начать, пройдите опрос и нажмите на сердечко у понравившихся растений.</p>
+        {isGuest && (
+          <div className="mb-6 text-center text-sm text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-3">
+          <div className="mb-2">Зарегистрируйтесь, чтобы сохранить выбранные растения</div>
+          <div className="flex items-center justify-center gap-2">
+            <button onClick={() => onShowAuth && onShowAuth('register')} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-lime-500 text-white hover:bg-lime-600 transition-colors">
+              Зарегистрироваться
+            </button>
+            <button  onClick={() => onShowAuth && onShowAuth('login')} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors" >
+                   Войти
+            </button>
+          </div>
+        </div>
+        )}
         <button onClick={() => onNavigate('home')} className="w-full py-3 px-6 bg-lime-500 text-white font-bold rounded-xl hover:bg-lime-600 transition-all shadow-lg shadow-lime-300/50">
             <Zap className="w-5 h-5 inline mr-2" />Начать подбор
         </button>
@@ -90,6 +103,19 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate, onAddToMyPlants,
   return (
     <div className="relative">
       <h2 className="text-3xl font-bold text-emerald-800 mb-6 text-center">Избранное ({favorites.length} {favorites.length === 1 ? 'растение' : favorites.length >= 2 && favorites.length <= 4 ? 'растения' : 'растений'})</h2>
+      {isGuest && (
+        <div className="mb-6 text-center text-sm text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-lg px-4 py-3">
+          <div className="mb-2">Зарегистрируйтесь, чтобы сохранить выбранные растения</div>
+          <div className="flex items-center justify-center gap-2">
+            <button onClick={() => onShowAuth && onShowAuth('register')} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-lime-500 text-white hover:bg-lime-600 transition-colors">
+              Зарегистрироваться
+            </button>
+            <button  onClick={() => onShowAuth && onShowAuth('login')} className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 transition-colors" >
+                   Войти
+            </button>
+          </div>
+        </div>
+      )}
       <div className="bg-white p-4 rounded-xl shadow-md flex justify-between items-center mb-6 border border-emerald-100">
         <div className="flex items-center space-x-3">
             <button onClick={handleSelectAll} className="flex items-center text-sm font-medium text-emerald-700 hover:text-lime-600 transition-colors p-2 rounded-lg bg-emerald-50">
@@ -112,4 +138,5 @@ const FavoritesScreen = ({ favorites, setFavorites, onNavigate, onAddToMyPlants,
 };
 
 export default FavoritesScreen;
+
 
