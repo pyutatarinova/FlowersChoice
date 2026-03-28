@@ -1,6 +1,8 @@
 import base64
 import json
 import os
+import threading
+import time
 
 # import psycopg2
 import random
@@ -17,10 +19,13 @@ from flasgger import Swagger
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-# Add ml_services to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "ml_services"))
+# Keep backend module resolution first, but make ml_services importable.
+ML_SERVICES_DIR = Path(__file__).parent.parent / "ml_services"
+if str(ML_SERVICES_DIR) not in sys.path:
+    sys.path.append(str(ML_SERVICES_DIR))
 
 from plant_repository import PlantRepository
+from email_service import build_watering_congrats_email, build_watering_reminder_email, send_email
 
 app = Flask(__name__)
 CORS(app)
@@ -47,6 +52,14 @@ load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 JWT_SECRET = os.getenv("JWT_SECRET", "SUPER_SECRET_KEY")
 JWT_ALGO = "HS256"
 JWT_EXPIRE_MIN = 60
+ENABLE_WATERING_EMAIL_JOBS = os.getenv("ENABLE_WATERING_EMAIL_JOBS", "false").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+    "on",
+}
+WATERING_REMINDER_CHECK_INTERVAL_MINUTES = max(1, int(os.getenv("WATERING_REMINDER_CHECK_INTERVAL_MINUTES", "60")))
+WATERING_REMINDER_STARTUP_DELAY_SECONDS = max(0, int(os.getenv("WATERING_REMINDER_STARTUP_DELAY_SECONDS", "15")))
 
 
 # -----------------------------
@@ -73,6 +86,90 @@ def is_password_valid(password: str) -> bool:
     has_letter = any(ch.isalpha() for ch in password)
     has_digit = any(ch.isdigit() for ch in password)
     return has_letter and has_digit
+
+
+def _to_bool(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _send_watering_done_email(user_id: int, plant_id: int, fallback_email: str | None = None) -> None:
+    """Send congratulation email when user marks plant as watered."""
+    try:
+        repo = PlantRepository()
+        user_info = repo.get_user_info(user_id) or {}
+        plant_info = repo.get_plant_by_id(plant_id) or {}
+
+        user_email = (user_info.get("email") or fallback_email or "").strip()
+        if not user_email:
+            return
+
+        user_name = user_info.get("name") or ""
+        plant_name = plant_info.get("name") or "ваше растение"
+
+        subject, html_body, text_body = build_watering_congrats_email(user_name=user_name, plant_name=plant_name)
+        send_email(user_email, subject, html_body, text_body=text_body)
+    except Exception as e:
+        print(f"Ошибка отправки письма после полива: {e}")
+
+
+def _process_watering_reminders_once(run_date: date | None = None) -> None:
+    """Single iteration: find due reminders and send emails."""
+    today = run_date or date.today()
+    try:
+        repo = PlantRepository()
+        candidates = repo.get_watering_reminder_candidates(today)
+        if not candidates:
+            return
+
+        for candidate in candidates:
+            user_id = candidate["user_id"]
+            plant_id = candidate["plant_id"]
+            user_email = candidate.get("user_email")
+            if not user_email:
+                continue
+
+            reserved = repo.mark_watering_reminder_sent(user_id, plant_id, today)
+            if not reserved:
+                continue
+
+            subject, html_body, text_body = build_watering_reminder_email(
+                user_name=candidate.get("user_name") or "",
+                plant_name=candidate.get("plant_name") or "",
+                due_date=today,
+            )
+            sent = send_email(user_email, subject, html_body, text_body=text_body)
+            if not sent:
+                repo.clear_watering_reminder_sent(user_id, plant_id, today)
+    except Exception as e:
+        print(f"Ошибка обработки ежедневных напоминаний о поливе: {e}")
+
+
+def _watering_reminder_worker() -> None:
+    """Background loop for daily watering reminders."""
+    if WATERING_REMINDER_STARTUP_DELAY_SECONDS > 0:
+        time.sleep(WATERING_REMINDER_STARTUP_DELAY_SECONDS)
+
+    interval_seconds = WATERING_REMINDER_CHECK_INTERVAL_MINUTES * 60
+    while True:
+        _process_watering_reminders_once()
+        time.sleep(interval_seconds)
+
+
+def _start_watering_reminder_worker() -> None:
+    if not ENABLE_WATERING_EMAIL_JOBS:
+        print("Email reminders are disabled (ENABLE_WATERING_EMAIL_JOBS=false)")
+        return
+    if getattr(app, "_watering_reminder_worker_started", False):
+        return
+
+    worker_thread = threading.Thread(target=_watering_reminder_worker, daemon=True, name="watering-reminder-worker")
+    worker_thread.start()
+    app._watering_reminder_worker_started = True
+    print("Watering reminder worker started")
 
 
 # -----------------------------
@@ -799,6 +896,16 @@ def _build_prompt(search_criteria: dict) -> str: # noqa: C901
     return ". ".join(_dedupe_keep_order(prompt_parts))
 
 
+def _get_plant_features(plant_data: dict) -> dict:
+    features = plant_data.get("features") or {}
+    if isinstance(features, str):
+        try:
+            features = json.loads(features)
+        except json.JSONDecodeError:
+            features = {}
+    return features if isinstance(features, dict) else {}
+
+
 def _format_plant_response(plant_data: dict) -> dict:
     """Format plant data for frontend response with desired fields."""
     desired_features = [
@@ -810,26 +917,22 @@ def _format_plant_response(plant_data: dict) -> dict:
         "photo",
     ]
 
-    features = plant_data.get("features") or {}
-    if isinstance(features, str):
-        try:
-            features = json.loads(features)
-        except json.JSONDecodeError:
-            features = {}
-
+    features = _get_plant_features(plant_data)
     merged = {}
 
     # Extract only desired features from the features JSONB
-    if isinstance(features, dict):
-        for key in desired_features:
-            if key in features:
-                merged[key] = features[key]
+    for key in desired_features:
+        if key in features:
+            merged[key] = features[key]
 
     # Add primary fields (ensure they override feature keys)
     merged["id"] = plant_data.get("id")
     merged["plant_name"] = plant_data.get("name")
     merged["score"] = plant_data.get("score", 0.0) if plant_data.get("score") is not None else 0.0
     merged["notes"] = plant_data.get("notes", "")
+    merged["watering_schedule_days"] = plant_data.get("watering_schedule_days")
+    merged["last_watering_date"] = plant_data.get("last_watering_date")
+    merged["watering_history"] = plant_data.get("watering_history") or []
 
     return merged
 
@@ -840,6 +943,43 @@ def _format_plant_response_with_rating(plant_data: dict) -> dict:
     result["avg_score"] = plant_data.get("avg_score", 0.0)
     result["rating_count"] = plant_data.get("rating_count", 0)
     result["rating_position"] = plant_data.get("rating_position", 0)
+    return result
+
+
+def _format_plant_detail_response(plant_data: dict) -> dict:
+    """Format detailed plant response with all DB features for single plant page."""
+    features = _get_plant_features(plant_data)
+
+    result = _format_plant_response_with_rating(plant_data)
+    result["features"] = features
+
+    # Ensure these fields are available at top-level for convenient frontend access.
+    top_level_fields = [
+        "origin",
+        "soil_type",
+        "humidity_preference",
+        "fertilizer_needs",
+        "growth_rate",
+        "toxicity",
+        "maintenance_level",
+        "repotting_frequency",
+        "common_pests",
+        "common_diseases",
+        "common_issues",
+        "legend_of_plant",
+        "health_benefits",
+        "flowering",
+        "fragrance",
+        "misting",
+        "flowering_misting",
+        "min_temp",
+        "max_temp",
+    ]
+
+    for field_name in top_level_fields:
+        if field_name in features and field_name not in result:
+            result[field_name] = features[field_name]
+
     return result
 
 
@@ -1216,6 +1356,182 @@ def update_plant_notes(user_payload):
         return jsonify({"success": False, "message": "Ошибка обновления заметок"}), 500
 
 
+@app.route("/api/update-plant-watering", methods=["OPTIONS"])
+def update_plant_watering_options():
+    """Handle CORS preflight request for update-plant-watering"""
+    return "", 200
+
+
+@app.route("/api/update-plant-watering", methods=["POST"])
+@auth_required
+def update_plant_watering(user_payload):
+    """
+    Update watering schedule data for a plant in user's collection
+    ---
+    tags:
+      - Plants
+    security:
+      - Bearer: []
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - plant_id
+          properties:
+            plant_id:
+              type: integer
+              example: 1
+            watering_schedule_days:
+              type: integer
+              nullable: true
+              example: 7
+              description: "Watering interval in days. null means 'not selected'."
+            last_watering_date:
+              type: string
+              nullable: true
+              example: "2026-03-28"
+              description: "Last watering date in YYYY-MM-DD format."
+            watering_history:
+              type: array
+              items:
+                type: string
+                example: "2026-03-21"
+              description: "Watering history dates in YYYY-MM-DD format."
+            watered_now:
+              type: boolean
+              nullable: true
+              example: true
+              description: "Set true when user clicks 'Я полила' to trigger congratulation email."
+    responses:
+      200:
+        description: Watering schedule updated successfully
+        schema:
+          type: object
+          properties:
+            success:
+              type: boolean
+            message:
+              type: string
+      400:
+        description: Validation error in request payload
+      401:
+        description: Unauthorized
+      404:
+        description: Plant not found in user's collection
+      500:
+        description: Database/server error
+    """
+    user_id = user_payload.get("user_id")
+    data = request.get_json()
+
+    if not data or "plant_id" not in data:
+        return jsonify({"success": False, "message": "Требуется plant_id"}), 400
+
+    try:
+        plant_id = int(data["plant_id"])
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "message": "plant_id должен быть целым числом"}), 400
+
+    raw_schedule = data.get("watering_schedule_days")
+    if raw_schedule in (None, ""):
+        watering_schedule_days = None
+    else:
+        try:
+            watering_schedule_days = int(raw_schedule)
+        except (TypeError, ValueError):
+            return jsonify({"success": False, "message": "watering_schedule_days должен быть целым числом"}), 400
+        if watering_schedule_days <= 0:
+            return jsonify({"success": False, "message": "watering_schedule_days должен быть больше 0"}), 400
+
+    raw_last_watering_date = data.get("last_watering_date")
+    if raw_last_watering_date in (None, ""):
+        last_watering_date = None
+    else:
+        last_watering_date = str(raw_last_watering_date).strip()
+        try:
+            last_watering_date = date.fromisoformat(last_watering_date).isoformat()
+        except ValueError:
+            return jsonify({"success": False, "message": "last_watering_date должен быть в формате YYYY-MM-DD"}), 400
+
+    raw_history = data.get("watering_history", [])
+    if raw_history is None:
+        raw_history = []
+    if not isinstance(raw_history, list):
+        return jsonify({"success": False, "message": "watering_history должен быть массивом дат"}), 400
+
+    watered_now = _to_bool(data.get("watered_now"), default=False)
+    normalized_history: List[str] = []
+    for item in raw_history:
+        if item is None:
+            continue
+        item_str = str(item).strip()
+        if not item_str:
+            continue
+        try:
+            normalized_history.append(date.fromisoformat(item_str).isoformat())
+        except ValueError:
+            return jsonify({"success": False, "message": "Все даты в watering_history должны быть в формате YYYY-MM-DD"}), 400
+
+    normalized_history = sorted(set(normalized_history))
+    if last_watering_date:
+        normalized_history = sorted(set([*normalized_history, last_watering_date]))
+    elif normalized_history:
+        last_watering_date = normalized_history[-1]
+
+    try:
+        repo = PlantRepository()
+        repo.update_plant_watering(
+            user_id=user_id,
+            plant_id=plant_id,
+            watering_schedule_days=watering_schedule_days,
+            last_watering_date=last_watering_date,
+            watering_history=normalized_history,
+        )
+        if watered_now:
+            _send_watering_done_email(user_id=user_id, plant_id=plant_id, fallback_email=user_payload.get("email"))
+        return jsonify({"success": True, "message": "График полива обновлен"})
+    except Exception as e:
+        print(f"Ошибка при обновлении графика полива: {e}")
+        if "not found" in str(e):
+            return jsonify({"success": False, "message": "Растение не найдено в коллекции пользователя"}), 404
+        return jsonify({"success": False, "message": "Ошибка обновления графика полива"}), 500
+
+
+@app.route("/api/plants/<int:plant_id>", methods=["GET"])
+def plant_details(plant_id: int):
+    """
+    Get a single plant with full feature set for detail page.
+    ---
+    tags:
+      - Plants
+    parameters:
+      - name: plant_id
+        in: path
+        type: integer
+        required: true
+    responses:
+      200:
+        description: Plant details retrieved
+      404:
+        description: Plant not found
+      500:
+        description: Server error
+    """
+    try:
+        repo = PlantRepository()
+        plant = repo.get_plant_by_id(int(plant_id))
+        if not plant:
+            return jsonify({"success": False, "message": "Plant not found"}), 404
+
+        return jsonify({"success": True, "plant": _format_plant_detail_response(plant)})
+    except Exception as e:
+        print(f"Error in /api/plants/{plant_id}: {e}")
+        return jsonify({"success": False, "message": "Plant details error", "details": str(e)}), 500
+
+
 @app.route("/api/plants-rating", methods=["GET"])
 def plants_rating():
     """
@@ -1464,5 +1780,7 @@ def plants_rating_filter():
 # -----------------------------
 # Start server
 # -----------------------------
+_start_watering_reminder_worker()
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=PORT)

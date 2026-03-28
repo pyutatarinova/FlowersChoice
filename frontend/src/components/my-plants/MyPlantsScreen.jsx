@@ -18,8 +18,8 @@ const MyPlantsScreen = ({ myPlants, onUpdatePlant, onRemovePlant, onNavigate }) 
     }
     
     const sortedPlants = [...myPlants].sort((a, b) => {
-        const aStatus = getWateringStatus(a.wateringHistory, a.wateringSchedule);
-        const bStatus = getWateringStatus(b.wateringHistory, b.wateringSchedule);
+        const aStatus = getWateringStatus(a.wateringHistory, a.wateringSchedule, a.lastWateringDate);
+        const bStatus = getWateringStatus(b.wateringHistory, b.wateringSchedule, b.lastWateringDate);
         if (aStatus.isDue && !bStatus.isDue) return -1;
         if (!aStatus.isDue && bStatus.isDue) return 1;
         return (aStatus.daysLeft || Infinity) - (bStatus.daysLeft || Infinity);

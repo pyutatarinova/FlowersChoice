@@ -5,3 +5,7 @@
 **/.env
 **/ml_venv
 **/.env.prod
+**/node_modules
+**/ml_venv
+**/dist
+**/.venv

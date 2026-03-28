@@ -15,7 +15,7 @@ const TOXICITY_OPTIONS = [
   "Токсичен"
 ];
 
-const RatingsScreen = ({ favorites, setFavorites }) => {
+const RatingsScreen = ({ favorites, setFavorites, onNavigate }) => {
   const PER_PAGE = 20;
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -340,6 +340,7 @@ const RatingsScreen = ({ favorites, setFavorites }) => {
             onToggleDetails={handleToggleDetails}
             isDetailed={detailedPlantId === plant.id}
             onAddToFavorites={() => handleAddToFavorites(plant)}
+            onOpenPlant={() => onNavigate?.('plant_details', plant)}
           />
         ))
       )}
