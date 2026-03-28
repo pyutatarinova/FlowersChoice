@@ -5,7 +5,6 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 BACKEND_DIR = REPO_ROOT / "backend"
 

@@ -1,31 +1,22 @@
 import base64
 import json
 import os
+import random
 import threading
 import time
-
-# import psycopg2
-import random
-import psycopg2
-import sys
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Any, List, Tuple
 
 import jwt
+import psycopg2
 from dotenv import load_dotenv
+from email_service import build_watering_congrats_email, build_watering_reminder_email, send_email
 from flasgger import Swagger
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-
-# Keep backend module resolution first, but make ml_services importable.
-ML_SERVICES_DIR = Path(__file__).parent.parent / "ml_services"
-if str(ML_SERVICES_DIR) not in sys.path:
-    sys.path.append(str(ML_SERVICES_DIR))
-
 from plant_repository import PlantRepository
-from email_service import build_watering_congrats_email, build_watering_reminder_email, send_email
 
 app = Flask(__name__)
 CORS(app)
@@ -94,6 +85,76 @@ def _to_bool(value: Any, default: bool = False) -> bool:
     if isinstance(value, bool):
         return value
     return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _parse_required_int(payload: dict, field: str, error_message: str) -> int:
+    if not payload or field not in payload:
+        raise ValueError(error_message)
+    try:
+        return int(payload[field])
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} должен быть целым числом") from exc
+
+
+def _parse_positive_int_or_none(value: Any, field: str) -> int | None:
+    if value in (None, ""):
+        return None
+
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{field} должен быть целым числом") from exc
+
+    if parsed <= 0:
+        raise ValueError(f"{field} должен быть больше 0")
+    return parsed
+
+
+def _parse_iso_date_or_none(value: Any, field: str) -> str | None:
+    if value in (None, ""):
+        return None
+
+    date_value = str(value).strip()
+    try:
+        return date.fromisoformat(date_value).isoformat()
+    except ValueError as exc:
+        raise ValueError(f"{field} должен быть в формате YYYY-MM-DD") from exc
+
+
+def _normalize_watering_history(raw_history: Any) -> List[str]:
+    if raw_history is None:
+        return []
+    if not isinstance(raw_history, list):
+        raise ValueError("watering_history должен быть массивом дат")
+
+    normalized_history: List[str] = []
+    for item in raw_history:
+        if item is None:
+            continue
+        item_str = str(item).strip()
+        if not item_str:
+            continue
+        try:
+            normalized_history.append(date.fromisoformat(item_str).isoformat())
+        except ValueError as exc:
+            raise ValueError("Все даты в watering_history должны быть в формате YYYY-MM-DD") from exc
+
+    return sorted(set(normalized_history))
+
+
+def _parse_watering_update_payload(payload: dict | None) -> tuple[int, int | None, str | None, List[str], bool]:
+    plant_id = _parse_required_int(payload or {}, "plant_id", "Требуется plant_id")
+    watering_schedule_days = _parse_positive_int_or_none((payload or {}).get("watering_schedule_days"), "watering_schedule_days")
+    last_watering_date = _parse_iso_date_or_none((payload or {}).get("last_watering_date"), "last_watering_date")
+    normalized_history = _normalize_watering_history((payload or {}).get("watering_history", []))
+    watered_now = _to_bool((payload or {}).get("watered_now"), default=False)
+
+    if last_watering_date:
+        normalized_history = sorted({*normalized_history, last_watering_date})
+    elif normalized_history:
+        last_watering_date = normalized_history[-1]
+
+    return plant_id, watering_schedule_days, last_watering_date, normalized_history, watered_now
 
 
 def _send_watering_done_email(user_id: int, plant_id: int, fallback_email: str | None = None) -> None:
@@ -1427,59 +1488,12 @@ def update_plant_watering(user_payload):
     user_id = user_payload.get("user_id")
     data = request.get_json()
 
-    if not data or "plant_id" not in data:
-        return jsonify({"success": False, "message": "Требуется plant_id"}), 400
-
     try:
-        plant_id = int(data["plant_id"])
-    except (TypeError, ValueError):
-        return jsonify({"success": False, "message": "plant_id должен быть целым числом"}), 400
-
-    raw_schedule = data.get("watering_schedule_days")
-    if raw_schedule in (None, ""):
-        watering_schedule_days = None
-    else:
-        try:
-            watering_schedule_days = int(raw_schedule)
-        except (TypeError, ValueError):
-            return jsonify({"success": False, "message": "watering_schedule_days должен быть целым числом"}), 400
-        if watering_schedule_days <= 0:
-            return jsonify({"success": False, "message": "watering_schedule_days должен быть больше 0"}), 400
-
-    raw_last_watering_date = data.get("last_watering_date")
-    if raw_last_watering_date in (None, ""):
-        last_watering_date = None
-    else:
-        last_watering_date = str(raw_last_watering_date).strip()
-        try:
-            last_watering_date = date.fromisoformat(last_watering_date).isoformat()
-        except ValueError:
-            return jsonify({"success": False, "message": "last_watering_date должен быть в формате YYYY-MM-DD"}), 400
-
-    raw_history = data.get("watering_history", [])
-    if raw_history is None:
-        raw_history = []
-    if not isinstance(raw_history, list):
-        return jsonify({"success": False, "message": "watering_history должен быть массивом дат"}), 400
-
-    watered_now = _to_bool(data.get("watered_now"), default=False)
-    normalized_history: List[str] = []
-    for item in raw_history:
-        if item is None:
-            continue
-        item_str = str(item).strip()
-        if not item_str:
-            continue
-        try:
-            normalized_history.append(date.fromisoformat(item_str).isoformat())
-        except ValueError:
-            return jsonify({"success": False, "message": "Все даты в watering_history должны быть в формате YYYY-MM-DD"}), 400
-
-    normalized_history = sorted(set(normalized_history))
-    if last_watering_date:
-        normalized_history = sorted(set([*normalized_history, last_watering_date]))
-    elif normalized_history:
-        last_watering_date = normalized_history[-1]
+        plant_id, watering_schedule_days, last_watering_date, normalized_history, watered_now = _parse_watering_update_payload(
+            data
+        )
+    except ValueError as e:
+        return jsonify({"success": False, "message": str(e)}), 400
 
     try:
         repo = PlantRepository()
