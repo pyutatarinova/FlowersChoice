@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Gift, User } from 'lucide-react';
+import { Leaf, Gift, User, Zap, Sun, Droplets, Heart, Feather, ThumbsUp, X, ChevronRight, Check, RefreshCcw, GitCompare, Minus, Plus, Settings, Calendar, Notebook, Star, BarChart3, Search, MessageCircle } from 'lucide-react';
 import LandingPage from './LendingPage';
 
 // header
@@ -573,6 +573,8 @@ const App = () => {
     loadUserPlantsData(token);
   }, [loadUserPlantsData]);
 
+
+  const isGuest = !localStorage.getItem('authToken');
   useEffect(() => {
     const route = resolveRoute(window.location.pathname);
     if (route.state === 'plant_details') {
@@ -656,9 +658,18 @@ const App = () => {
           );
       }
       case 'loading': return <LoadingScreen />;
-      case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
-      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
-      case 'manual_selection': return <ManualSelectionScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} />;
+      case 'results': return <ResultsScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} isGuest={isGuest} onShowAuth={(type) => {
+        if (type === 'login') setShowLoginWidget(true);
+        else setShowAuthWidget(true);
+      }} />;
+      case 'favorites': return <FavoritesScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} isGuest={isGuest} onShowAuth={(type) => {
+        if (type === 'login') setShowLoginWidget(true);
+        else setShowAuthWidget(true);
+      }} />;
+      case 'manual_selection': return <ManualSelectionScreen favorites={favorites} setFavorites={setFavorites} onNavigate={navigate} isGuest={isGuest} onShowAuth={(type) => {
+        if (type === 'login') setShowLoginWidget(true);
+        else setShowAuthWidget(true);
+      }} />;
       case 'compare': return <ComparisonScreen selectedPlants={comparisonPlants} onFinishComparison={handleFinishComparison} onAddToMyPlants={addToMyPlants} onRequireAuth={() => setShowAuthRequired(true)} />;
       case 'my_plants': return <MyPlantsScreen myPlants={myPlants} onUpdatePlant={updatePlant} onRemovePlant={removePlant} onNavigate={navigate} />;
       case 'profile': return <ProfileScreen
@@ -709,6 +720,20 @@ const App = () => {
           </div>
         )}
       </main>
+      <a
+        href="https://forms.gle/xdzJUqN6yhSL3Tib9"
+        target="_blank"
+        rel="noreferrer"
+        aria-label="Обратная связь"
+        className="group fixed bottom-6 right-6 z-[1200]"
+      >
+        <span className="flex items-center rounded-full border border-emerald-100 bg-white/95 px-3 py-3 text-emerald-700 shadow-lg shadow-emerald-200/40 backdrop-blur transition-all duration-200 hover:shadow-xl focus-within:shadow-xl">
+    <MessageCircle className="h-5 w-5 text-emerald-600" />
+        <span className="max-w-0 overflow-hidden whitespace-nowrap text-sm font-medium text-emerald-700 opacity-0 transition-all duration-200 group-hover:max-w-[160px] group-hover:opacity-100 ml-0 group-hover:ml-2">
+      Обратная связь
+        </span>
+      </span>
+      </a>
       {/* Модальное окно регистрации */}
       {showAuthWidget && (
         <AuthModal

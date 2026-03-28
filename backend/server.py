@@ -6,6 +6,7 @@ import time
 
 # import psycopg2
 import random
+import psycopg2
 import sys
 from datetime import date, datetime, timedelta, timezone
 from functools import wraps
@@ -311,6 +312,18 @@ def register():
 
     try:
         repo = PlantRepository()
+        # If email already exists, show a clear registration warning.
+        if repo.get_user_by_email(profile["email"]):
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Почта уже зарегистрирована. Войдите или используйте другую",
+                    }
+                ),
+                409,
+            )
+
         user_id = repo.register_user(
             name=profile["name"],
             email=profile["email"],
@@ -327,6 +340,17 @@ def register():
 
         return jsonify({"success": True, "token": token, "message": "Регистрация успешна"})
 
+    except psycopg2.IntegrityError as e:
+        print("Ошибка регистрации (email уже существует):", e)
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": "Почта уже зарегистрирована. Войдите или используйте другую",
+                }
+            ),
+            409,
+        )
     except Exception as e:
         print("Ошибка при сохранении в БД:", e)
         return jsonify({"success": False, "message": "Ошибка сохранения в БД"}), 500

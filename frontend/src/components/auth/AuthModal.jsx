@@ -36,7 +36,7 @@ function AuthModal({ onClose, onRegister }) {
       return;
     }
     if (!isPasswordValid(form.password)) {
-      setError('Пароль должен быть не короче 6 символов и содержать буквы и цифры.');
+      setError('Пароль должен быть не короче 6 символов и содержать буквы и цифры');
       return;
     }
     setError('');
