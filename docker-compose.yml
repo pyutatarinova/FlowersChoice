@@ -65,6 +65,8 @@ services:
   prometheus:
     image: prom/prometheus:latest
     container_name: flowerschoice_prometheus
+    profiles:
+      - monitoring
     depends_on:
       - backend
     command:

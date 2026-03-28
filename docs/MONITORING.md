@@ -47,6 +47,10 @@
 
 `prometheus`
 
+Сервис вынесен в отдельный Docker Compose profile:
+
+`monitoring`
+
 Он:
 
 - запускается в отдельном контейнере;
@@ -57,6 +61,8 @@
 После запуска stack Prometheus UI будет доступен по адресу:
 
 `http://localhost:9090`
+
+Важно: Prometheus не стартует автоматически при обычном dev/prod запуске проекта. Он поднимается только если явно включить profile `monitoring`.
 
 ### 4. Добавлен scrape-конфиг Prometheus
 
@@ -97,21 +103,33 @@ Prometheus обращается к backend по внутреннему имен�
 
 ## Как запустить monitoring локально
 
-1. Собрать и поднять контейнеры:
+1. Для базового compose-запуска с monitoring включить profile:
 
 ```bash
-docker compose up --build
+docker compose --profile monitoring up --build
 ```
 
-2. Убедиться, что backend запущен.
+2. Для dev-режима использовать:
 
-3. Открыть Prometheus:
+```bash
+docker compose --profile monitoring --env-file .env.dev -f docker-compose.yml -f docker-compose.dev.yml up -d --build
+```
+
+3. Для prod-режима использовать:
+
+```bash
+docker compose --profile monitoring --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+4. Убедиться, что backend запущен.
+
+5. Открыть Prometheus:
 
 `http://localhost:9090`
 
-4. Перейти в раздел `Status -> Targets` и проверить, что target `flowerschoice-backend` находится в состоянии `UP`.
+6. Перейти в раздел `Status -> Targets` и проверить, что target `flowerschoice-backend` находится в состоянии `UP`.
 
-5. Сгенерировать несколько запросов к backend API и проверить, что метрики начали обновляться.
+7. Сгенерировать несколько запросов к backend API и проверить, что метрики начали обновляться.
 
 ## Что важно понимать про текущую реализацию
 

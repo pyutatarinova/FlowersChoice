@@ -27,6 +27,12 @@ docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod
 docker compose --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 ```
 
+Мониторинг Prometheus в prod не включен по умолчанию. Если он нужен, запускайте compose с profile `monitoring`:
+
+```bash
+docker compose --profile monitoring --env-file .env.prod -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
 ## HTTPS (Let's Encrypt)
 
 1. Убедитесь, что DNS `flowers-choice.ru` указывает на `178.72.179.125`.
