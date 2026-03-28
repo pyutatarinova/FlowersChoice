@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Droplets, X, Calendar, Notebook, Star, BarChart3 } from 'lucide-react';
 import WateringCalendarModal from '../../components/my-plants/WateringCalendarModal';
-import { getWateringStatus, formatDate, normalizeWateringHistory, toISODateString } from '../../App';
+import { getWateringStatus, formatDate, normalizeWateringHistory, toISODateString } from '../../lib/wateringUtils';
 
 const MyPlantCard = ({ plant, onUpdate, onRemove }) => {
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);

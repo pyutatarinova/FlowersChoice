@@ -4,7 +4,7 @@ import {
     getLatestWateringDate,
     normalizeWateringHistory,
     toISODateString
-} from '../../App';
+} from '../../lib/wateringUtils';
 
 const WateringCalendarModal = ({ plant, onClose }) => {
     const [date, setDate] = useState(new Date());
